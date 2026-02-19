@@ -1,23 +1,30 @@
 import type { ComponentType } from "react";
-import type { ToolConfig } from "@/tools/_template/config";
-import { config as templateConfig } from "@/tools/_template/config";
 import TemplateTool from "@/tools/_template/index";
 
-const toolRegistry: Record<string, { config: ToolConfig; component: ComponentType }> = {
-  _template: {
-    config: templateConfig,
-    component: TemplateTool,
-  },
+export type ToolConfig = {
+  slug: string;
+  name: string;
+  description?: string;
+  icon?: string;
 };
 
-export function getRegisteredTools(): ToolConfig[] {
-  return Object.values(toolRegistry).map((t) => t.config);
+export const tools: ToolConfig[] = [
+  {
+    slug: "_template",
+    name: "Template Tool",
+    description: "A template for creating new SEO tools.",
+    icon: "layout",
+  },
+];
+
+const componentMap: Record<string, ComponentType> = {
+  _template: TemplateTool,
+};
+
+export function getToolConfig(slug: string): ToolConfig | undefined {
+  return tools.find((t) => t.slug === slug);
 }
 
-export function getToolConfig(toolId: string): ToolConfig | undefined {
-  return toolRegistry[toolId]?.config;
-}
-
-export function getToolComponent(toolId: string): ComponentType | undefined {
-  return toolRegistry[toolId]?.component;
+export function getToolComponent(slug: string): ComponentType | undefined {
+  return componentMap[slug];
 }

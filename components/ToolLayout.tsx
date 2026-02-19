@@ -1,5 +1,4 @@
-import { getToolComponent } from "@/lib/toolRegistry";
-import type { ToolConfig } from "@/tools/_template/config";
+import { getToolComponent, type ToolConfig } from "@/lib/toolRegistry";
 
 type Props = {
   tool: string;
