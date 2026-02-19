@@ -1,0 +1,15 @@
+# SEO Tools Platform - Cursor Rules
+
+## Project Context
+
+- Next.js 14 with App Router
+- TypeScript
+- Tailwind CSS (utility classes only, no custom CSS files)
+- Supabase for backend
+
+## Conventions
+
+- Use the tool template at `tools/_template` when creating new tools
+- Register new tools in `lib/toolRegistry.ts`
+- Do not modify the sidebar or core layout beyond initial creation
+- No auth middleware in base setup
