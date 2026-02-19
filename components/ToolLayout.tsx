@@ -16,7 +16,9 @@ export function ToolLayout({ tool, config }: Props) {
           <p className="mt-1 text-gray-600">{config.description}</p>
         )}
       </div>
-      {Component ? <Component /> : null}
+      <div className="flex-1">
+        {Component ? <Component /> : null}
+      </div>
     </div>
   );
 }

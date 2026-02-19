@@ -1,5 +1,4 @@
 import type { ComponentType } from "react";
-import TemplateTool from "@/tools/_template/index";
 
 export type ToolConfig = {
   slug: string;
@@ -8,18 +7,9 @@ export type ToolConfig = {
   icon?: string;
 };
 
-export const tools: ToolConfig[] = [
-  {
-    slug: "_template",
-    name: "Template Tool",
-    description: "A template for creating new SEO tools.",
-    icon: "layout",
-  },
-];
+export const tools: ToolConfig[] = [];
 
-const componentMap: Record<string, ComponentType> = {
-  _template: TemplateTool,
-};
+const componentMap: Record<string, ComponentType> = {};
 
 export function getToolConfig(slug: string): ToolConfig | undefined {
   return tools.find((t) => t.slug === slug);
