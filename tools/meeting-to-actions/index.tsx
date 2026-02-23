@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { MeetingToActionsUI } from "./MeetingToActionsUI";
 import type { MeetingPayload, ActionItem, EmailDraft, TaskResult } from "./types";
 
@@ -38,29 +38,62 @@ export default function MeetingToActionsTool() {
   const [slackLoading, setSlackLoading] = useState(false);
   const [slackSuccess, setSlackSuccess] = useState(false);
   const [slackError, setSlackError] = useState<string | null>(null);
+  const [meetings, setMeetings] = useState<MeetingPayload[]>([]);
+  const [fathomMeetings, setFathomMeetings] = useState<MeetingPayload[]>([]);
+  const [fathomLoading, setFathomLoading] = useState(false);
+  const [meetingFromWebhook, setMeetingFromWebhook] = useState<MeetingPayload | null>(null);
+  const [meetingSource, setMeetingSource] = useState<"webhook" | "past">("webhook");
+  const meetingSourceRef = useRef(meetingSource);
+  meetingSourceRef.current = meetingSource;
   const fetchStatus = useCallback(async () => {
     try {
       const res = await fetch("/api/meeting-to-actions/status");
-      const data = (await res.json()) as { meeting: MeetingPayload | null };
-      if (data.meeting) setMeeting(data.meeting);
+      const data = (await res.json()) as { meeting: MeetingPayload | null; meetings?: MeetingPayload[] };
+      setMeetingFromWebhook(data.meeting ?? null);
+      if (data.meetings) setMeetings(data.meetings);
+      if (meetingSourceRef.current !== "past") setMeeting(data.meeting ?? null);
     } catch {}
+  }, []);
+
+  const handleLoadFathomMeetings = useCallback(async () => {
+    setFathomLoading(true);
+    try {
+      const res = await fetch("/api/meeting-to-actions/fathom-meetings?limit=20");
+      const data = (await res.json()) as { meetings?: MeetingPayload[]; error?: string };
+      if (data.meetings) setFathomMeetings(data.meetings);
+      else if (data.error) setProcessError(data.error);
+    } catch (err) {
+      setProcessError(err instanceof Error ? err.message : "Failed to load Fathom meetings");
+    } finally {
+      setFathomLoading(false);
+    }
+  }, []);
+
+  const handleSelectMeeting = useCallback((m: MeetingPayload) => {
+    setMeeting(m);
+    setMeetingSource("past");
   }, []);
 
   useEffect(() => {
     fetchStatus();
-    const id = setInterval(fetchStatus, 10000);
+    const id = setInterval(fetchStatus, 3600000); // 1 hour
     return () => clearInterval(id);
   }, [fetchStatus]);
 
-  const handleProcess = async () => {
-    if (!meeting) return;
+  useEffect(() => {
+    handleLoadFathomMeetings();
+    const id = setInterval(handleLoadFathomMeetings, 30000);
+    return () => clearInterval(id);
+  }, [handleLoadFathomMeetings]);
+
+  const processMeeting = useCallback(async (m: MeetingPayload) => {
     setProcessLoading(true);
     setProcessError(null);
     try {
       const res = await fetch("/api/meeting-to-actions/process", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ meeting_title: meeting.meeting_title, date: meeting.date, participants: meeting.participants, summary: meeting.summary, transcript: meeting.transcript, extraction_mode: "explicit_and_implicit" }),
+        body: JSON.stringify({ meeting_title: m.meeting_title, date: m.date, participants: m.participants, summary: m.summary, transcript: m.transcript, extraction_mode: "explicit_and_implicit" }),
       });
       const data = await res.json();
       if (!res.ok) {
@@ -81,6 +114,11 @@ export default function MeetingToActionsTool() {
     } finally {
       setProcessLoading(false);
     }
+  }, []);
+
+  const handleProcess = async () => {
+    if (!meeting) return;
+    await processMeeting(meeting);
   };
 
   const handleLoadAndProcess = async () => {
@@ -102,6 +140,8 @@ export default function MeetingToActionsTool() {
       const loadedMeeting = data.meeting;
       if (!loadedMeeting) { setProcessError("No meeting returned"); return; }
       setMeeting(loadedMeeting);
+      setMeetingSource("webhook");
+      setMeetingFromWebhook(loadedMeeting);
 
       const processRes = await fetch("/api/meeting-to-actions/process", {
         method: "POST",
@@ -207,11 +247,23 @@ export default function MeetingToActionsTool() {
   const draftComplete = gmailLink !== null;
   const slackActive = asanaComplete && draftComplete;
 
+  const allPastMeetings = [
+    ...meetings,
+    ...fathomMeetings.filter((f) => !meetings.some((m) => m.id === f.id)),
+  ].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+
   return (
     <MeetingToActionsUI
       activeTab={activeTab}
       setActiveTab={setActiveTab}
+      incomingMeeting={meetingFromWebhook}
+      selectedMeeting={meetingSource === "past" ? meeting : null}
+      meetingSource={meetingSource}
       meeting={meeting}
+      meetings={allPastMeetings}
+      fathomLoading={fathomLoading}
+      onSelectMeeting={handleSelectMeeting}
+      onClearSelection={() => { setMeeting(meetingFromWebhook); setMeetingSource("webhook"); }}
       processLoading={processLoading}
       processError={processError}
       manualTitle={manualTitle}

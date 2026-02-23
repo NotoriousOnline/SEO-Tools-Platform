@@ -13,24 +13,24 @@ export function Sidebar() {
   };
 
   return (
-    <aside className="flex w-64 shrink-0 flex-col border-r border-slate-200 bg-white shadow-sm">
-      <div className="flex h-full flex-col p-5">
+    <aside className="flex w-64 shrink-0 flex-col bg-slate-900 shadow-xl">
+      <div className="flex h-full flex-col p-6">
         <Link
           href="/"
-          className="mb-8 flex items-center gap-2 text-xl font-bold tracking-tight text-slate-900"
+          className="mb-10 flex items-center gap-3 text-xl font-bold tracking-tight text-white"
         >
-          <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-indigo-600 text-sm font-semibold text-white">
+          <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-teal-400 to-teal-600 text-sm font-bold text-white shadow-lg shadow-teal-500/25">
             S
           </span>
           SEO Tools
         </Link>
-        <nav className="flex flex-col gap-0.5">
+        <nav className="flex flex-col gap-1">
           <Link
             href="/"
-            className={`rounded-lg px-3 py-2.5 text-sm font-medium transition-colors ${
+            className={`rounded-xl px-4 py-3 text-sm font-medium transition-all ${
               isActive("/")
-                ? "bg-indigo-50 text-indigo-700"
-                : "text-slate-600 hover:bg-slate-50 hover:text-slate-900"
+                ? "bg-teal-500/20 text-teal-300 shadow-inner"
+                : "text-slate-400 hover:bg-white/5 hover:text-slate-200"
             }`}
           >
             Home
@@ -41,10 +41,10 @@ export function Sidebar() {
               <Link
                 key={tool.slug}
                 href={href}
-                className={`rounded-lg px-3 py-2.5 text-sm font-medium transition-colors ${
+                className={`rounded-xl px-4 py-3 text-sm font-medium transition-all ${
                   isActive(href)
-                    ? "bg-indigo-50 text-indigo-700"
-                    : "text-slate-600 hover:bg-slate-50 hover:text-slate-900"
+                    ? "bg-teal-500/20 text-teal-300 shadow-inner"
+                    : "text-slate-400 hover:bg-white/5 hover:text-slate-200"
                 }`}
               >
                 {tool.name}

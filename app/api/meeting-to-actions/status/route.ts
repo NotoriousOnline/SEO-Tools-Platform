@@ -1,9 +1,12 @@
 import { NextResponse } from "next/server";
-import { getLatestMeeting } from "@/lib/meetingStore";
+import { getLatestMeeting, getAllMeetings } from "@/lib/meetingStore";
 
 export async function GET() {
   try {
-    return NextResponse.json({ meeting: getLatestMeeting() });
+    return NextResponse.json({
+      meeting: getLatestMeeting(),
+      meetings: getAllMeetings(),
+    });
   } catch (err) {
     console.error("[Fathom status] Error:", err);
     return NextResponse.json(

@@ -4,6 +4,12 @@
 
 @layer base {
   body {
-    @apply antialiased;
+    @apply antialiased text-slate-800;
+  }
+}
+
+@layer utilities {
+  .glass {
+    @apply border border-white/20 bg-white/5 backdrop-blur-md;
   }
 }
