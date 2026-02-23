@@ -3,6 +3,9 @@
 @tailwind utilities;
 
 @layer base {
+  html {
+    font-family: var(--font-jakarta), system-ui, sans-serif;
+  }
   body {
     @apply antialiased text-slate-800;
   }

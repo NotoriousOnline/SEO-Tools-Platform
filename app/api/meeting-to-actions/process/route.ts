@@ -39,7 +39,8 @@ Rules:
 - Split compound actions into individual tasks
 - Set owner to Unassigned if not mentioned
 - Convert implied deadlines to real date strings
-- Separate client actions from internal team actions using related_to_client`;
+- Separate client actions from internal team actions using related_to_client
+- Do NOT prepend [HIGH], [MEDIUM], or [LOW] to task_title — priority is set via a separate field`;
 
 const ACTIONS_PROMPT_EXPLICIT_AND_IMPLICIT = `You are an expert at extracting action items from meeting content.
 Extract BOTH explicit and implicit operational follow-ups from the Summary and Transcript.
@@ -69,7 +70,8 @@ Rules:
 - Convert implied deadlines to real date strings (e.g. by next Friday becomes an actual date)
 - For implicit items: base them on clear inference from the discussion—do not invent unrelated tasks
 - Include operational follow-ups that are logically required by decisions or commitments made
-- Separate client actions from internal team actions using related_to_client`;
+- Separate client actions from internal team actions using related_to_client
+- Do NOT prepend [HIGH], [MEDIUM], or [LOW] to task_title — priority is set via a separate field`;
 
 function stripMarkdownFences(text: string): string {
   return text

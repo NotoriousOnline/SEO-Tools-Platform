@@ -29,20 +29,17 @@ function formatDueDate(dueDate: string | undefined): string | undefined {
   return `${y}-${m}-${d}`;
 }
 
-function prefixWithPriority(title: string, priority?: string): string {
-  const p = (priority ?? "").toLowerCase();
-  if (p === "high") return `[HIGH] ${title}`;
-  if (p === "medium") return `[MEDIUM] ${title}`;
-  if (p === "low") return `[LOW] ${title}`;
-  return title;
-}
-
-function getPriorityEnumGid(priority?: string): string | undefined {
-  const p = (priority ?? "").toLowerCase();
-  if (p === "high") return process.env.ASANA_PRIORITY_HIGH_GID;
-  if (p === "medium") return process.env.ASANA_PRIORITY_MEDIUM_GID;
-  if (p === "low") return process.env.ASANA_PRIORITY_LOW_GID;
-  return undefined;
+function getPriorityEnumGid(priority: string): string | null {
+  switch (priority.toLowerCase()) {
+    case "high":
+      return process.env.ASANA_PRIORITY_HIGH_GID || null;
+    case "medium":
+      return process.env.ASANA_PRIORITY_MEDIUM_GID || null;
+    case "low":
+      return process.env.ASANA_PRIORITY_LOW_GID || null;
+    default:
+      return process.env.ASANA_PRIORITY_MEDIUM_GID || null;
+  }
 }
 
 export async function POST(request: Request) {
@@ -72,6 +69,13 @@ export async function POST(request: Request) {
 
     const meetingContext = `\n\nMeeting: ${meeting_title} (${date})`;
 
+    const priorityFieldGid = process.env.ASANA_PRIORITY_FIELD_GID;
+    if (!priorityFieldGid) {
+      console.warn(
+        "[Create tasks] ASANA_PRIORITY_FIELD_GID not set — priority will not be applied"
+      );
+    }
+
     const createTask = async (
       action: ActionItem
     ): Promise<
@@ -81,22 +85,24 @@ export async function POST(request: Request) {
       const task_title = String(action.task_title ?? "Untitled task");
       const description = String(action.description ?? "");
       const due_date = formatDueDate(action.due_date);
-      const nameWithPriority = prefixWithPriority(task_title, action.priority);
+
+      const priorityEnumGid = getPriorityEnumGid(
+        action.priority ?? "Medium"
+      );
+      const customFields =
+        priorityFieldGid && priorityEnumGid
+          ? { [priorityFieldGid]: priorityEnumGid }
+          : {};
 
       const data: Record<string, unknown> = {
-        name: nameWithPriority,
+        name: task_title,
         notes: description + meetingContext,
         projects: [projectGid],
+        custom_fields: customFields,
       };
 
       if (due_date) {
         data.due_on = due_date;
-      }
-
-      const priorityFieldGid = process.env.ASANA_PRIORITY_FIELD_GID;
-      const priorityEnumGid = getPriorityEnumGid(action.priority);
-      if (priorityFieldGid && priorityEnumGid) {
-        data.custom_fields = { [priorityFieldGid]: priorityEnumGid };
       }
 
       try {
@@ -114,7 +120,7 @@ export async function POST(request: Request) {
           return {
             success: false,
             error: errText || `HTTP ${res.status}`,
-            task_title: nameWithPriority,
+            task_title,
           };
         }
 
@@ -128,14 +134,14 @@ export async function POST(request: Request) {
           success: true,
           task_gid,
           task_url,
-          task_title: nameWithPriority,
+          task_title,
         };
       } catch (err) {
         const msg = err instanceof Error ? err.message : String(err);
         return {
           success: false,
           error: msg,
-          task_title: nameWithPriority,
+          task_title,
         };
       }
     };
