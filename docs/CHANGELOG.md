@@ -1,5 +1,14 @@
 # Changelog
 
+## 2026-02-23 — Asana Priority Fix
+
+- Fixed Asana priority — now set via native custom field GID instead of name prefix
+- Removed [HIGH]/[MEDIUM]/[LOW] prefix from task titles; priority uses custom_fields with ASANA_PRIORITY_FIELD_GID and enum option GIDs
+- Added assignee to task creation via resolveOwner
+- Log warning when ASANA_PRIORITY_FIELD_GID is not set
+
+---
+
 ## 2026-02-21 — Asana Priority Custom Field
 
 - Added support for Asana Priority custom field via env vars (ASANA_PRIORITY_FIELD_GID, ASANA_PRIORITY_HIGH_GID, etc.)
