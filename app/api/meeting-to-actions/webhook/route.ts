@@ -84,6 +84,20 @@ function extractPayload(data: unknown): MeetingPayload {
     Array.isArray(x) ? x.map((i) => String(i ?? "")) : [];
   const str = (x: unknown): string => (typeof x === "string" ? x : "");
 
+  const meetingUrls: string[] = [];
+  const urlFields = [
+    obj.recording_url,
+    obj.share_url,
+    obj.meeting_url,
+    obj.url,
+    obj.recording_link,
+    obj.link,
+  ];
+  for (const u of urlFields) {
+    const s = str(u);
+    if (s && s.startsWith("http") && !meetingUrls.includes(s)) meetingUrls.push(s);
+  }
+
   return {
     meeting_title: str(obj.meeting_title ?? obj.title ?? obj.name ?? ""),
     date: str(obj.date ?? obj.created_at ?? obj.timestamp ?? new Date().toISOString()),
@@ -91,6 +105,7 @@ function extractPayload(data: unknown): MeetingPayload {
     summary: str(obj.summary ?? ""),
     action_items: arr(obj.action_items ?? obj.action_items_list ?? []),
     transcript: str(obj.transcript ?? ""),
+    meeting_urls: meetingUrls.length > 0 ? meetingUrls : undefined,
   };
 }
 

@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import type { MeetingPayload, ActionItem, TaskResult } from "./types";
 
 type Tab = "webhook" | "manual";
@@ -7,7 +8,13 @@ type Tab = "webhook" | "manual";
 type Props = {
   activeTab: Tab;
   setActiveTab: (t: Tab) => void;
+  incomingMeeting: MeetingPayload | null;
+  selectedMeeting: MeetingPayload | null;
+  meetingSource: "webhook" | "past";
   meeting: MeetingPayload | null;
+  meetings: MeetingPayload[];
+  fathomLoading: boolean;
+  onSelectMeeting: (m: MeetingPayload) => void;
   processLoading: boolean;
   processError: string | null;
   manualTitle: string;
@@ -49,7 +56,14 @@ export function MeetingToActionsUI(props: Props) {
   const {
     activeTab,
     setActiveTab,
+    incomingMeeting,
+    selectedMeeting,
+    meetingSource,
     meeting,
+    meetings,
+    fathomLoading,
+    onSelectMeeting,
+    onClearSelection,
     processLoading,
     processError,
     manualTitle,
@@ -87,12 +101,13 @@ export function MeetingToActionsUI(props: Props) {
     onNotifySlack,
   } = props;
 
+  const [pastMeetingsOpen, setPastMeetingsOpen] = useState(false);
   const sectionCls = "rounded-2xl border border-slate-200 bg-white p-6 shadow-lg";
   const disabledCls = " opacity-50 pointer-events-none";
-  const inputCls = "w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm text-slate-900 placeholder-slate-400 transition-colors focus:border-indigo-400 focus:outline-none focus:ring-2 focus:ring-indigo-200";
-  const btnPrimary = "rounded-xl bg-indigo-600 px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition-all hover:bg-indigo-700 hover:shadow disabled:opacity-50";
-  const btnSuccess = "rounded-xl bg-emerald-600 px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition-all hover:bg-emerald-700 hover:shadow disabled:opacity-50";
-  const btnSlack = "rounded-xl bg-purple-900 px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition-all hover:bg-purple-800 hover:shadow disabled:opacity-50";
+  const inputCls = "w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm text-slate-900 placeholder-slate-400 transition-colors focus:border-teal-400 focus:outline-none focus:ring-2 focus:ring-teal-200";
+  const btnPrimary = "rounded-xl bg-teal-600 px-4 py-2.5 text-sm font-semibold text-white shadow-md transition-all hover:bg-teal-700 hover:shadow-lg disabled:opacity-50";
+  const btnSuccess = "rounded-xl bg-emerald-600 px-4 py-2.5 text-sm font-semibold text-white shadow-md transition-all hover:bg-emerald-700 hover:shadow-lg disabled:opacity-50";
+  const btnSlack = "rounded-xl bg-violet-700 px-4 py-2.5 text-sm font-semibold text-white shadow-md transition-all hover:bg-violet-800 hover:shadow-lg disabled:opacity-50";
 
   return (
     <div className="space-y-6">
@@ -118,22 +133,40 @@ export function MeetingToActionsUI(props: Props) {
           </div>
 
           {activeTab === "webhook" ? (
-            !meeting ? (
-              <div className="flex items-center gap-3 rounded-xl border border-amber-200 bg-amber-50 p-5">
+            !incomingMeeting ? (
+              <div className="flex items-center gap-3 rounded-xl border border-amber-200 bg-gradient-to-r from-amber-50 to-orange-50 p-5">
                 <span className="h-2.5 w-2.5 animate-pulse rounded-full bg-amber-500" />
-                <p className="text-sm font-medium text-amber-800">Waiting for Fathom webhook… Polling every 10 seconds.</p>
+                <p className="text-sm font-medium text-amber-800">Waiting for Fathom webhook… Polling every 1 hour.</p>
               </div>
             ) : (
               <div>
                 <div className="space-y-2 rounded-xl bg-slate-50 p-5 text-sm">
-                  <p><span className="font-semibold text-slate-600">Title:</span> <span className="text-slate-800">{meeting.meeting_title}</span></p>
-                  <p><span className="font-semibold text-slate-600">Date:</span> <span className="text-slate-800">{meeting.date}</span></p>
-                  <p><span className="font-semibold text-slate-600">Participants:</span> <span className="text-slate-800">{meeting.participants.length > 0 ? meeting.participants.join(", ") : "—"}</span></p>
+                  <p><span className="font-semibold text-slate-600">Title:</span> <span className="text-slate-800">{incomingMeeting.meeting_title}</span></p>
+                  <p><span className="font-semibold text-slate-600">Date:</span> <span className="text-slate-800">{incomingMeeting.date}</span></p>
+                  {incomingMeeting.meeting_urls && incomingMeeting.meeting_urls.length > 0 && (
+                    <div>
+                      <span className="font-semibold text-slate-600">Meeting URLs:</span>
+                      <ul className="mt-1 list-inside list-disc space-y-0.5">
+                        {incomingMeeting.meeting_urls.map((url, i) => (
+                          <li key={i}>
+                            <a href={url} target="_blank" rel="noopener noreferrer" className="font-medium text-indigo-600 hover:text-indigo-700 hover:underline">
+                              {url}
+                            </a>
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  )}
+                  <p><span className="font-semibold text-slate-600">Participants:</span> <span className="text-slate-800">{incomingMeeting.participants.length > 0 ? incomingMeeting.participants.join(", ") : "—"}</span></p>
                 </div>
-                <button onClick={onProcess} disabled={processLoading} className="mt-4 rounded-xl bg-indigo-600 px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition-all hover:bg-indigo-700 hover:shadow disabled:opacity-50">
-                  {processLoading ? "Processing…" : "Process with Claude"}
-                </button>
-                {processError && <p className="mt-3 rounded-xl bg-red-50 px-4 py-2.5 text-sm font-medium text-red-700">{processError}</p>}
+                {meetingSource === "webhook" && (
+                  <>
+                    <button onClick={onProcess} disabled={processLoading} className="mt-4 rounded-xl bg-teal-600 px-4 py-2.5 text-sm font-semibold text-white shadow-md transition-all hover:bg-teal-700 hover:shadow-lg disabled:opacity-50">
+                      {processLoading ? "Processing…" : "Process with Claude"}
+                    </button>
+                    {processError && <p className="mt-3 rounded-xl bg-red-50 px-4 py-2.5 text-sm font-medium text-red-700">{processError}</p>}
+                  </>
+                )}
               </div>
             )
           ) : (
@@ -164,6 +197,99 @@ export function MeetingToActionsUI(props: Props) {
             </button>
               {processError && <p className="mt-3 rounded-xl bg-red-50 px-4 py-2.5 text-sm font-medium text-red-700">{processError}</p>}
             </div>
+          )}
+        </section>
+
+        <section className={sectionCls}>
+          <button type="button" onClick={() => setPastMeetingsOpen(!pastMeetingsOpen)} className="-mx-2 mb-4 flex w-full items-center justify-between rounded-xl px-2 py-2 transition-colors hover:bg-slate-50">
+            <h3 className="text-lg font-semibold text-slate-800">Past Meetings</h3>
+            <div className="flex items-center gap-2">
+              {fathomLoading && <span className="text-xs text-slate-500">Loading…</span>}
+              <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className={`h-5 w-5 text-slate-500 transition-transform ${pastMeetingsOpen ? "rotate-180" : ""}`}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M19.5 8.25l-7.5 7.5-7.5-7.5" />
+              </svg>
+            </div>
+          </button>
+          {pastMeetingsOpen && (
+          <>
+          {selectedMeeting && (
+            <div className="mb-5 rounded-xl border border-indigo-200 bg-indigo-50/50 p-5">
+              <div className="mb-2 flex items-center justify-between">
+                <p className="text-xs font-semibold uppercase tracking-wider text-teal-600">Selected for processing</p>
+                {onClearSelection && (
+                  <button type="button" onClick={onClearSelection} className="text-xs text-slate-500 hover:text-slate-700">
+                    Clear
+                  </button>
+                )}
+              </div>
+              <div className="space-y-2 text-sm">
+                <p><span className="font-semibold text-slate-600">Title:</span> <span className="text-slate-800">{selectedMeeting.meeting_title}</span></p>
+                <p><span className="font-semibold text-slate-600">Date:</span> <span className="text-slate-800">{selectedMeeting.date}</span></p>
+                {selectedMeeting.meeting_urls && selectedMeeting.meeting_urls.length > 0 && (
+                  <div>
+                    <span className="font-semibold text-slate-600">Meeting URLs:</span>
+                    <ul className="mt-1 list-inside list-disc space-y-0.5">
+                      {selectedMeeting.meeting_urls.map((url, i) => (
+                        <li key={i}>
+                          <a href={url} target="_blank" rel="noopener noreferrer" className="font-medium text-indigo-600 hover:text-indigo-700 hover:underline">
+                            {url}
+                          </a>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
+                <p><span className="font-semibold text-slate-600">Participants:</span> <span className="text-slate-800">{selectedMeeting.participants.length > 0 ? selectedMeeting.participants.join(", ") : "—"}</span></p>
+              </div>
+              <button onClick={onProcess} disabled={processLoading} className="mt-4 rounded-xl bg-teal-600 px-4 py-2.5 text-sm font-semibold text-white shadow-md transition-all hover:bg-teal-700 hover:shadow-lg disabled:opacity-50">
+                {processLoading ? "Processing…" : "Process with Claude"}
+              </button>
+              {processError && <p className="mt-3 rounded-xl bg-red-50 px-4 py-2.5 text-sm font-medium text-red-700">{processError}</p>}
+            </div>
+          )}
+          {meetings.length === 0 ? (
+            <div className="flex flex-col items-center justify-center rounded-xl border-2 border-dashed border-slate-200 bg-slate-50 p-10 text-center">
+              <div className="mb-2 flex h-10 w-10 items-center justify-center rounded-full bg-slate-100 text-slate-400">
+                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="h-5 w-5">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M6.75 3v2.25M17.25 3v2.25M3 18.75V7.5a2.25 2.25 0 012.25-2.25h13.5A2.25 2.25 0 0121 7.5v11.25m-18 0A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75m-18 0v-7.5A2.25 2.25 0 015.25 9h13.5A2.25 2.25 0 0121 11.25v7.5" />
+                </svg>
+              </div>
+              <p className="text-sm text-slate-500">No past meetings yet</p>
+              <p className="mt-0.5 text-xs text-slate-400">Use webhook or wait for meetings to load</p>
+            </div>
+          ) : (
+            <ul className="max-h-52 space-y-2 overflow-y-auto pr-1">
+              {meetings.map((m) => (
+                <li key={m.id ?? m.meeting_title + m.date}>
+                  <button type="button" onClick={() => onSelectMeeting(m)} className="group flex w-full items-center gap-3 rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-left shadow-sm transition-all hover:border-teal-200 hover:bg-white hover:shadow-md">
+                    <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-teal-100 text-teal-600 group-hover:bg-teal-200">
+                      <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="h-4 w-4">
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M12 6v6h4.5m4.5 0a9 9 0 11-18 0 9 9 0 0118 0z" />
+                      </svg>
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <p className="truncate font-medium text-slate-800 group-hover:text-indigo-700">{m.meeting_title}</p>
+                      <div className="mt-0.5 flex items-center gap-2 text-xs text-slate-500">
+                        <span>{new Date(m.date).toLocaleDateString(undefined, { month: "short", day: "numeric", year: "numeric" })}</span>
+                        {m.meeting_urls && m.meeting_urls.length > 0 && (
+                          <span className="flex items-center gap-0.5 rounded-full bg-teal-50 px-1.5 py-0.5 text-teal-600">
+                            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="h-3 w-3">
+                              <path strokeLinecap="round" strokeLinejoin="round" d="M13.19 8.688a4.5 4.5 0 011.242 7.244l-4.5 4.5a4.5 4.5 0 01-6.364-6.364l1.757-1.757m13.35-.622l1.757-1.757a4.5 4.5 0 00-6.364-6.364l-4.5 4.5a4.5 4.5 0 001.242 7.244" />
+                            </svg>
+                            {m.meeting_urls.length}
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="h-4 w-4 shrink-0 text-slate-300 group-hover:text-indigo-700 group-hover:translate-x-0.5">
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M8.25 4.5l7.5 7.5-7.5 7.5" />
+                    </svg>
+                  </button>
+                </li>
+              ))}
+            </ul>
+          )}
+          </>
           )}
         </section>
 
@@ -198,7 +324,7 @@ export function MeetingToActionsUI(props: Props) {
                       <label className="mb-1.5 block text-xs font-semibold uppercase tracking-wide text-slate-500">Priority</label>
                       <div className="flex gap-1.5">
                         {["High", "Medium", "Low"].map((p) => (
-                          <button key={p} type="button" onClick={() => updateAction(i, { priority: p as "High" | "Medium" | "Low" })} className={action.priority === p ? "rounded-lg bg-indigo-600 px-3 py-1.5 text-xs font-semibold text-white shadow-sm" : "rounded-lg bg-slate-200 px-3 py-1.5 text-xs font-medium text-slate-600 hover:bg-slate-300"}>
+                          <button key={p} type="button" onClick={() => updateAction(i, { priority: p as "High" | "Medium" | "Low" })} className={action.priority === p ? "rounded-lg bg-teal-600 px-3 py-1.5 text-xs font-semibold text-white shadow-sm" : "rounded-lg bg-slate-200 px-3 py-1.5 text-xs font-medium text-slate-600 hover:bg-slate-300"}>
                             {p}
                           </button>
                         ))}
@@ -240,7 +366,7 @@ export function MeetingToActionsUI(props: Props) {
                 <button onClick={onCreateDraft} disabled={draftLoading} className={btnPrimary}>
                   {draftLoading ? "Creating…" : "Create Gmail Draft"}
                 </button>
-                {gmailLink && <a href={gmailLink} target="_blank" rel="noopener noreferrer" className="rounded-xl border-2 border-indigo-200 px-4 py-2.5 text-sm font-semibold text-indigo-600 transition-colors hover:border-indigo-300 hover:bg-indigo-50">Open in Gmail</a>}
+                {gmailLink && <a href={gmailLink} target="_blank" rel="noopener noreferrer" className="rounded-xl border-2 border-teal-200 px-4 py-2.5 text-sm font-semibold text-teal-600 transition-colors hover:border-teal-300 hover:bg-teal-50">Open in Gmail</a>}
               </div>
               {draftError && <p className="mt-3 rounded-xl bg-red-50 px-4 py-2.5 text-sm font-medium text-red-700">{draftError}</p>}
             </div>

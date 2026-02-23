@@ -1,10 +1,13 @@
 export type MeetingPayload = {
+  id?: string;
   meeting_title: string;
   date: string;
   participants: string[];
   summary: string;
   action_items: string[];
   transcript: string;
+  meeting_urls?: string[];
+  source?: "manual" | "webhook";
 };
 
 export type ActionItem = {
