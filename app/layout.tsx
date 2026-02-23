@@ -14,10 +14,12 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en">
-      <body className="min-h-screen bg-gray-50">
+      <body className="min-h-screen bg-slate-50 antialiased">
         <div className="flex min-h-screen">
           <Sidebar />
-          <main className="flex-1 overflow-auto">{children}</main>
+          <main className="flex-1 overflow-auto bg-gradient-to-br from-slate-50 via-white to-indigo-50">
+            {children}
+          </main>
         </div>
       </body>
     </html>
