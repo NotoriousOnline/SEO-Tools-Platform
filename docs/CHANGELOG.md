@@ -1,5 +1,103 @@
 # Changelog
 
+## 2026-02-21 — Asana Priority Custom Field
+
+- Added support for Asana Priority custom field via env vars (ASANA_PRIORITY_FIELD_GID, ASANA_PRIORITY_HIGH_GID, etc.)
+- Task titles still include [HIGH]/[MEDIUM]/[LOW] prefix when priority env vars are not set
+
+---
+
+## 2026-02-21 — Manual Entry UI
+
+- Added Manual Entry tab to Meeting-to-Actions UI.
+
+---
+
+## 2026-02-21 — Manual Meeting Input
+
+- Added manual meeting input route at /api/meeting-to-actions/manual
+- Moved meeting state to shared lib/meetingStore.ts
+
+---
+
+## 2026-02-21 — Meeting-to-Actions Tool Complete
+
+Done:
+- Fathom webhook receiver + status route
+- Claude AI processing (email summary + action extraction)
+- Asana task creation with owner mapping and priority prefixes
+- Gmail draft creation via OAuth
+- Slack Block Kit notification
+- Full 4-section UI with human approval flow
+- End-to-end tested
+
+Next:
+- Phase 2: CRM integration (HubSpot / Salesforce)
+- Phase 2: Sentiment analysis and risk signal detection
+- Phase 2: Automatic follow-up reminder emails
+
+---
+
+## 2026-02-18 — Meeting-to-Actions UI
+
+- Built full Meeting-to-Actions UI with 4-section approval flow.
+
+---
+
+## 2026-02-18 — Slack Notification
+
+- Built Slack notification route.
+
+---
+
+## 2026-02-18 — Gmail Draft Creation
+
+- Built Gmail draft creation route.
+
+---
+
+## 2026-02-18 — Asana Task Creation
+
+- Built Asana task creation route.
+
+---
+
+## 2026-02-18 — AI Processing Route
+
+- Built AI processing route — email summary and action extraction.
+
+---
+
+## 2026-02-18 — Fathom Webhook
+
+- Built Fathom webhook receiver and status route.
+
+---
+
+## 2026-02-18 — Meeting-to-Actions Tool
+
+- Registered meeting-to-actions tool in toolRegistry.
+
+---
+
+## 2026-02-18 — Configuration Verified
+
+- All configuration verified — Anthropic, Asana, env vars, and utilities confirmed working. Ready to build Meeting-to-Actions features.
+
+---
+
+## 2026-02-18 — Owner Mapping
+
+- Created /lib/ownerMapping.ts with Asana user GIDs and resolveOwner utility.
+
+---
+
+## 2026-02-18 — Environment Variables
+
+- Added all env vars to .env.example (Supabase, Anthropic, Fathom, Trello, Gmail OAuth, Slack)
+
+---
+
 ## 2026-02-18 — Phase 1 Session Close
 
 **Done:**

@@ -11,9 +11,9 @@ export default async function ToolPage({ params }: Props) {
 
   if (!config) {
     return (
-      <div className="p-8">
-        <h1 className="text-2xl font-bold text-red-600">Tool not found</h1>
-        <p className="mt-2 text-gray-600">The requested tool &quot;{tool}&quot; does not exist.</p>
+      <div className="flex flex-col items-center justify-center p-12">
+        <h1 className="text-2xl font-bold text-slate-900">Tool not found</h1>
+        <p className="mt-2 text-slate-600">The requested tool &quot;{tool}&quot; does not exist.</p>
       </div>
     );
   }

@@ -13,18 +13,24 @@ export function Sidebar() {
   };
 
   return (
-    <aside className="w-64 shrink-0 border-r border-gray-200 bg-white">
-      <div className="flex h-full flex-col p-4">
-        <Link href="/" className="mb-6 text-lg font-semibold text-gray-900">
+    <aside className="flex w-64 shrink-0 flex-col border-r border-slate-200 bg-white shadow-sm">
+      <div className="flex h-full flex-col p-5">
+        <Link
+          href="/"
+          className="mb-8 flex items-center gap-2 text-xl font-bold tracking-tight text-slate-900"
+        >
+          <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-indigo-600 text-sm font-semibold text-white">
+            S
+          </span>
           SEO Tools
         </Link>
-        <nav className="flex flex-col gap-1">
+        <nav className="flex flex-col gap-0.5">
           <Link
             href="/"
-            className={`rounded-md px-3 py-2 text-sm ${
+            className={`rounded-lg px-3 py-2.5 text-sm font-medium transition-colors ${
               isActive("/")
-                ? "bg-gray-100 font-medium text-gray-900"
-                : "text-gray-700 hover:bg-gray-100"
+                ? "bg-indigo-50 text-indigo-700"
+                : "text-slate-600 hover:bg-slate-50 hover:text-slate-900"
             }`}
           >
             Home
@@ -35,10 +41,10 @@ export function Sidebar() {
               <Link
                 key={tool.slug}
                 href={href}
-                className={`rounded-md px-3 py-2 text-sm ${
+                className={`rounded-lg px-3 py-2.5 text-sm font-medium transition-colors ${
                   isActive(href)
-                    ? "bg-gray-100 font-medium text-gray-900"
-                    : "text-gray-700 hover:bg-gray-100"
+                    ? "bg-indigo-50 text-indigo-700"
+                    : "text-slate-600 hover:bg-slate-50 hover:text-slate-900"
                 }`}
               >
                 {tool.name}
