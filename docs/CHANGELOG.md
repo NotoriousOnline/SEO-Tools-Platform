@@ -1,5 +1,14 @@
 # Changelog
 
+## 2026-02-23 — Fathom Meetings 503 Fix
+
+- Fixed fathom-meetings 503 — added timeout handling, env var check, Vercel function config (maxDuration, force-dynamic)
+- Added AbortController with 8s fetch timeout; returns 504 on timeout
+- Returns 500 with clear message when FATHOM_API_KEY is missing
+- Top-level try/catch to avoid unhandled 503
+
+---
+
 ## 2026-02-23 — Asana Priority Fix
 
 - Fixed Asana priority — now set via native custom field GID instead of name prefix

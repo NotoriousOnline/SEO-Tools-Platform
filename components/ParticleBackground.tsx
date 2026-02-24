@@ -23,7 +23,6 @@ export function ParticleBackground() {
 
     let animationId: number;
     const particles: Particle[] = [];
-    const particleCount = 60;
 
     const resize = () => {
       canvas.width = window.innerWidth;
@@ -32,8 +31,9 @@ export function ParticleBackground() {
     };
 
     const initParticles = () => {
+      const count = canvas.width < 768 ? 25 : 60;
       particles.length = 0;
-      for (let i = 0; i < particleCount; i++) {
+      for (let i = 0; i < count; i++) {
         particles.push({
           x: Math.random() * canvas.width,
           y: Math.random() * canvas.height,
