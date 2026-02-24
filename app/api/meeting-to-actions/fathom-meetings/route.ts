@@ -1,6 +1,9 @@
 import { NextResponse } from "next/server";
 import type { MeetingPayload } from "@/lib/meetingStore";
 
+export const maxDuration = 30; // seconds — requires Vercel Pro or above
+export const dynamic = "force-dynamic"; // disable caching on this route
+
 type FathomTranscriptItem = { speaker?: { display_name?: string }; text?: string; timestamp?: string };
 type FathomMeeting = {
   title?: string;
@@ -38,10 +41,14 @@ function fathomToPayload(m: FathomMeeting, index: number): MeetingPayload {
 }
 
 export async function GET(request: Request) {
+  console.log("fathom-meetings route called — API key present:", !!process.env.FATHOM_API_KEY);
+
   try {
-    const apiKey = process.env.FATHOM_API_KEY;
-    if (!apiKey) {
-      return NextResponse.json({ error: "FATHOM_API_KEY not configured" }, { status: 503 });
+    if (!process.env.FATHOM_API_KEY) {
+      return NextResponse.json(
+        { error: "FATHOM_API_KEY is not set in environment variables" },
+        { status: 500 }
+      );
     }
 
     const { searchParams } = new URL(request.url);
@@ -52,30 +59,51 @@ export async function GET(request: Request) {
     url.searchParams.set("include_summary", "true");
     url.searchParams.set("include_transcript", "true");
     url.searchParams.set("include_action_items", "true");
-    if (createdAfter) url.searchParams.set("created_after", createdAfter);
     url.searchParams.set("limit", String(limit));
+    if (createdAfter) url.searchParams.set("created_after", createdAfter);
 
-    const res = await fetch(url.toString(), {
-      headers: { "X-Api-Key": apiKey },
-    });
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 8000);
 
-    if (!res.ok) {
-      const errText = await res.text();
-      console.error("[Fathom meetings] API error:", res.status, errText);
+    let response: Response;
+    try {
+      response = await fetch(url.toString(), {
+        headers: { "X-Api-Key": process.env.FATHOM_API_KEY },
+        signal: controller.signal,
+      });
+      clearTimeout(timeout);
+    } catch (err: unknown) {
+      clearTimeout(timeout);
+      if (err instanceof Error && err.name === "AbortError") {
+        return NextResponse.json(
+          { error: "Fathom API timed out after 8 seconds" },
+          { status: 504 }
+        );
+      }
+      const msg = err instanceof Error ? err.message : String(err);
+      return NextResponse.json({ error: msg }, { status: 500 });
+    }
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      console.error("Fathom API error:", response.status, errorText);
       return NextResponse.json(
-        { error: `Fathom API error: ${res.status}` },
-        { status: res.status >= 500 ? 502 : 400 }
+        { error: "Fathom API returned " + response.status, detail: errorText },
+        { status: response.status }
       );
     }
 
-    const data = (await res.json()) as { items?: FathomMeeting[] };
+    const data = (await response.json()) as { items?: FathomMeeting[] };
     const items = Array.isArray(data.items) ? data.items : [];
     const meetings = items.map((m, i) => fathomToPayload(m, i));
 
     return NextResponse.json({ meetings });
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err);
-    console.error("[Fathom meetings] Error:", msg);
-    return NextResponse.json({ error: msg || "Internal server error" }, { status: 500 });
+    console.error("[Fathom meetings] Unexpected error:", msg);
+    return NextResponse.json(
+      { error: "Unexpected error", detail: msg },
+      { status: 500 }
+    );
   }
 }

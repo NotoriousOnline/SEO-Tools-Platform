@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { Plus_Jakarta_Sans } from "next/font/google";
 import "./globals.css";
 import { ParticleBackground } from "@/components/ParticleBackground";
@@ -15,6 +15,12 @@ export const metadata: Metadata = {
   description: "SEO Tools Platform",
 };
 
+export const viewport: Viewport = {
+  width: "device-width",
+  initialScale: 1,
+  maximumScale: 5,
+};
+
 export default function RootLayout({
   children,
 }: Readonly<{
@@ -26,7 +32,7 @@ export default function RootLayout({
         <ParticleBackground />
         <div className="relative z-10 flex min-h-screen">
           <Sidebar />
-          <main className="flex-1 overflow-auto bg-gradient-to-br from-slate-50/90 via-white/90 to-teal-50/70">
+          <main className="flex-1 overflow-auto bg-gradient-to-br from-slate-50/90 via-white/90 to-teal-50/70 pt-14 md:pt-0">
             {children}
           </main>
         </div>
