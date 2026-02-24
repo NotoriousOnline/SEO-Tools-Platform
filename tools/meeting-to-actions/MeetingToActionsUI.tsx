@@ -15,6 +15,7 @@ type Props = {
   meetings: MeetingPayload[];
   fathomLoading: boolean;
   onSelectMeeting: (m: MeetingPayload) => void;
+  onClearSelection?: () => void;
   processLoading: boolean;
   processError: string | null;
   manualTitle: string;
