@@ -1,9 +1,12 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   webpack: (config, { dev }) => {
-    // Disable webpack cache in dev to avoid corruption (e.g. OneDrive sync)
     if (dev) {
-      config.cache = false;
+      // Use polling to avoid EBUSY/file-lock issues on Windows/OneDrive
+      config.watchOptions = {
+        ignored: ["**/node_modules/**", "**/.git/**", "**/.next/**"],
+        poll: 1000,
+      };
     }
     return config;
   },

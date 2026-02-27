@@ -73,17 +73,34 @@ Rules:
 - Separate client actions from internal team actions using related_to_client
 - Do NOT prepend [HIGH], [MEDIUM], or [LOW] to task_title — priority is set via a separate field`;
 
-function stripMarkdownFences(text: string): string {
-  return text
-    .split("\n")
-    .filter((line) => !line.trim().startsWith("```"))
-    .join("\n")
-    .trim();
+/** Extract JSON from Claude response — handles markdown fences, extra text, trailing commas. */
+function extractJson(text: string): string {
+  let cleaned = text.trim();
+  // Remove markdown code fences (```json ... ``` or ``` ... ```)
+  const fenceMatch = cleaned.match(/```(?:json)?\s*([\s\S]*?)```/);
+  if (fenceMatch) {
+    cleaned = fenceMatch[1].trim();
+  } else {
+    // Remove lines that are only ``` 
+    cleaned = cleaned
+      .split("\n")
+      .filter((line) => !line.trim().startsWith("```"))
+      .join("\n")
+      .trim();
+  }
+  // Try to extract JSON object/array if there's extra text before/after
+  const objMatch = cleaned.match(/\{[\s\S]*\}/);
+  if (objMatch) {
+    cleaned = objMatch[0];
+  }
+  // Remove trailing commas before ] or } (invalid but common in LLM output)
+  cleaned = cleaned.replace(/,(\s*[}\]])/g, "$1");
+  return cleaned;
 }
 
 /** Returns parsed data or throws if JSON is malformed (non-empty response). */
 function parseJsonOrThrow(text: string): unknown {
-  const cleaned = stripMarkdownFences(text);
+  const cleaned = extractJson(text);
   if (!cleaned.trim()) return null;
   try {
     return JSON.parse(cleaned);

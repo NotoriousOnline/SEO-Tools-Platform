@@ -30,6 +30,17 @@ export default function MeetingToActionsTool() {
   const [emailDraft, setEmailDraft] = useState<EmailDraft | null>(null);
   const [emailSubject, setEmailSubject] = useState("");
   const [emailBody, setEmailBody] = useState("");
+  const [projectGid, setProjectGid] = useState<string | null>(null);
+  const [projectUrl, setProjectUrl] = useState<string | null>(null);
+  const [projectName, setProjectName] = useState<string | null>(null);
+  const [priorityGids, setPriorityGids] = useState<{
+    priority_field_gid: string;
+    priority_high_gid: string;
+    priority_medium_gid: string;
+    priority_low_gid: string;
+  } | null>(null);
+  const [projectLoading, setProjectLoading] = useState(false);
+  const [projectError, setProjectError] = useState<string | null>(null);
   const [asanaLoading, setAsanaLoading] = useState(false);
   const [taskResults, setTaskResults] = useState<TaskResult[] | null>(null);
   const [draftLoading, setDraftLoading] = useState(false);
@@ -45,6 +56,7 @@ export default function MeetingToActionsTool() {
   const [meetingSource, setMeetingSource] = useState<"webhook" | "past">("webhook");
   const meetingSourceRef = useRef(meetingSource);
   meetingSourceRef.current = meetingSource;
+  const processAbortRef = useRef<AbortController | null>(null);
   const fetchStatus = useCallback(async () => {
     try {
       const res = await fetch("/api/meeting-to-actions/status");
@@ -74,6 +86,52 @@ export default function MeetingToActionsTool() {
     setMeetingSource("past");
   }, []);
 
+  const handleCreateProject = useCallback(async (m: MeetingPayload) => {
+    setProjectLoading(true);
+    setProjectError(null);
+    setProjectGid(null);
+    setProjectUrl(null);
+    setProjectName(null);
+    setPriorityGids(null);
+    try {
+      const res = await fetch("/api/meeting-to-actions/create-project", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ meeting_title: m.meeting_title, date: m.date }),
+      });
+      const data = (await res.json()) as {
+        success?: boolean;
+        project_gid?: string;
+        project_url?: string;
+        project_name?: string;
+        priority_field_gid?: string;
+        priority_high_gid?: string;
+        priority_medium_gid?: string;
+        priority_low_gid?: string;
+        error?: string;
+      };
+      if (data.success && data.project_gid) {
+        setProjectGid(data.project_gid);
+        setProjectUrl(data.project_url ?? null);
+        setProjectName(data.project_name ?? m.meeting_title);
+        if (data.priority_field_gid && data.priority_high_gid && data.priority_medium_gid && data.priority_low_gid) {
+          setPriorityGids({
+            priority_field_gid: data.priority_field_gid,
+            priority_high_gid: data.priority_high_gid,
+            priority_medium_gid: data.priority_medium_gid,
+            priority_low_gid: data.priority_low_gid,
+          });
+        }
+      } else {
+        setProjectError(data.error ?? "Project creation failed");
+      }
+    } catch (err) {
+      setProjectError(err instanceof Error ? err.message : "Project creation failed");
+    } finally {
+      setProjectLoading(false);
+    }
+  }, []);
+
   useEffect(() => {
     fetchStatus();
     const id = setInterval(fetchStatus, 3600000); // 1 hour
@@ -89,11 +147,19 @@ export default function MeetingToActionsTool() {
   const processMeeting = useCallback(async (m: MeetingPayload) => {
     setProcessLoading(true);
     setProcessError(null);
+    setProjectGid(null);
+    setProjectUrl(null);
+    setProjectName(null);
+    setProjectError(null);
+    setPriorityGids(null);
+    const controller = new AbortController();
+    processAbortRef.current = controller;
     try {
       const res = await fetch("/api/meeting-to-actions/process", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ meeting_title: m.meeting_title, date: m.date, participants: m.participants, summary: m.summary, transcript: m.transcript, extraction_mode: "explicit_and_implicit" }),
+        signal: controller.signal,
       });
       const data = await res.json();
       if (!res.ok) {
@@ -109,28 +175,46 @@ export default function MeetingToActionsTool() {
         setEmailSubject(parsed.email_draft.subject ?? "");
         setEmailBody(formatEmailBody(parsed.email_draft));
       }
+      await handleCreateProject(m);
     } catch (err) {
-      setProcessError(err instanceof Error ? err.message : "Process failed");
+      if (err instanceof Error && err.name === "AbortError") {
+        setProcessError("Cancelled");
+      } else {
+        setProcessError(err instanceof Error ? err.message : "Process failed");
+      }
     } finally {
+      processAbortRef.current = null;
       setProcessLoading(false);
     }
-  }, []);
+  }, [handleCreateProject]);
 
   const handleProcess = async () => {
     if (!meeting) return;
     await processMeeting(meeting);
   };
 
+  const handleCancelProcess = useCallback(() => {
+    processAbortRef.current?.abort();
+  }, []);
+
   const handleLoadAndProcess = async () => {
     setProcessError(null);
     if (!manualTitle.trim()) { setProcessError("Meeting title is required"); return; }
     if (!manualDate.trim()) { setProcessError("Date is required"); return; }
     setProcessLoading(true);
+    setProjectGid(null);
+    setProjectUrl(null);
+    setProjectName(null);
+    setProjectError(null);
+    setPriorityGids(null);
+    const controller = new AbortController();
+    processAbortRef.current = controller;
     try {
       const res = await fetch("/api/meeting-to-actions/manual", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ meeting_title: manualTitle, date: manualDate, participants: manualParticipants, summary: manualSummary, transcript: manualTranscript }),
+        signal: controller.signal,
       });
       const data = (await res.json()) as { success?: boolean; meeting?: MeetingPayload; error?: string };
       if (!res.ok || !data.success) {
@@ -147,6 +231,7 @@ export default function MeetingToActionsTool() {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ meeting_title: loadedMeeting.meeting_title, date: loadedMeeting.date, participants: loadedMeeting.participants, summary: loadedMeeting.summary, transcript: loadedMeeting.transcript, extraction_mode: "explicit_and_implicit" }),
+        signal: controller.signal,
       });
       const processData = (await processRes.json()) as { email_draft?: EmailDraft; actions?: ActionItem[]; error?: string };
       if (!processRes.ok) {
@@ -161,9 +246,15 @@ export default function MeetingToActionsTool() {
         setEmailSubject(processData.email_draft.subject ?? "");
         setEmailBody(formatEmailBody(processData.email_draft));
       }
+      await handleCreateProject(loadedMeeting);
     } catch (err) {
-      setProcessError(err instanceof Error ? err.message : "Load & process failed");
+      if (err instanceof Error && err.name === "AbortError") {
+        setProcessError("Cancelled");
+      } else {
+        setProcessError(err instanceof Error ? err.message : "Load & process failed");
+      }
     } finally {
+      processAbortRef.current = null;
       setProcessLoading(false);
     }
   };
@@ -176,7 +267,19 @@ export default function MeetingToActionsTool() {
       const res = await fetch("/api/meeting-to-actions/create-tasks", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ meeting_title: meeting.meeting_title, date: meeting.date, actions: actions.map((a) => ({ task_title: a.task_title, description: a.description, owner: a.owner, due_date: a.due_date || undefined, priority: a.priority })) }),
+        body: JSON.stringify({
+          meeting_title: meeting.meeting_title,
+          date: meeting.date,
+          actions: actions.map((a) => ({
+            task_title: a.task_title,
+            description: a.description,
+            owner: a.owner,
+            due_date: a.due_date || undefined,
+            priority: (a.priority as "High" | "Medium" | "Low") ?? "Medium",
+          })),
+          ...(projectGid ? { project_gid: projectGid } : {}),
+          ...(priorityGids ? priorityGids : {}),
+        }),
       });
       const data = (await res.json()) as TaskResult[];
       setTaskResults(Array.isArray(data) ? data : []);
@@ -281,6 +384,11 @@ export default function MeetingToActionsTool() {
       removeAction={removeAction}
       taskResults={taskResults}
       asanaLoading={asanaLoading}
+      projectGid={projectGid}
+      projectUrl={projectUrl}
+      projectName={projectName}
+      projectLoading={projectLoading}
+      projectError={projectError}
       emailSubject={emailSubject}
       setEmailSubject={setEmailSubject}
       emailBody={emailBody}
@@ -295,6 +403,7 @@ export default function MeetingToActionsTool() {
       processComplete={processComplete}
       slackActive={slackActive}
       onProcess={handleProcess}
+      onCancelProcess={handleCancelProcess}
       onLoadAndProcess={handleLoadAndProcess}
       onPushAsana={handlePushAsana}
       onCreateDraft={handleCreateDraft}
