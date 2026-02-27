@@ -11,6 +11,7 @@ type NotifySlackBody = {
   date?: string;
   tasks?: TaskItem[];
   gmail_link?: string;
+  project_url?: string;
 };
 
 export async function POST(request: Request) {
@@ -69,6 +70,9 @@ export async function POST(request: Request) {
                 ? `*Gmail draft:* <${gmail_link}|Open draft>`
                 : "*Gmail draft:* N/A",
             },
+            ...(project_url
+              ? [{ type: "mrkdwn" as const, text: `*Asana Project:* <${project_url}|Open project>` }]
+              : []),
           ],
         },
         { type: "divider" },

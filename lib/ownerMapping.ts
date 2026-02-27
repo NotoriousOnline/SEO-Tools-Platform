@@ -5,6 +5,8 @@
 const ownerMap: Record<string, string> = {
   Sam: "1234567890123456",
   Alex: "1234567890123457",
+  Graham: "ASANA_USER_GID_HERE",
+  Mark: "ASANA_USER_GID_HERE",
   "Marketing Team": "1234567890123458",
   "Dev Team": "1234567890123459",
 };
@@ -18,16 +20,18 @@ const DEFAULT_OWNER = "1234567890123456";
  * @returns Asana user GID string
  */
 export function resolveOwner(name: string): string {
-  const trimmed = name?.trim() ?? "";
-  if (trimmed === "" || trimmed.toLowerCase() === "unassigned") {
+  console.log("resolveOwner called with:", name);
+  if (!name || name.trim().toLowerCase() === "unassigned") {
+    console.log("resolveOwner: no name — returning DEFAULT_OWNER");
     return DEFAULT_OWNER;
   }
-  const lower = trimmed.toLowerCase();
-  for (const [key, gid] of Object.entries(ownerMap)) {
-    const keyLower = key.toLowerCase();
-    if (lower.includes(keyLower) || keyLower.includes(lower)) {
-      return gid;
-    }
+  const match = Object.keys(ownerMap).find((k) =>
+    name.trim().toLowerCase().includes(k.toLowerCase())
+  );
+  if (match) {
+    console.log("resolveOwner: matched", match, "→", ownerMap[match]);
+    return ownerMap[match];
   }
+  console.log("resolveOwner: no match for", name, "— returning DEFAULT_OWNER");
   return DEFAULT_OWNER;
 }

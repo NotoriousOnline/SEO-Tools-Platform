@@ -1,5 +1,46 @@
 # Changelog
 
+## 2026-02-24 — resolveOwner Import, Project Creation Fix
+
+- Fixed resolveOwner import error in create-tasks route
+- Fixed project creation — added full Asana error logging and conditional team field
+
+---
+
+## 2026-02-24 — Priority Prefix, Assignee Logging, Project Date Format
+
+- Fixed priority display using emoji prefix fallback for Asana free trial
+- Added resolveOwner debug logging to diagnose assignee mismatches
+- Fixed project name date format from ISO timestamp to readable date
+
+---
+
+## 2026-02-24 — Auto Priority and Status on New Projects
+
+- Auto Priority and Status fields now attached to every new Asana project on creation
+- All tasks created with Priority and Status set automatically
+- Retry logic added so tasks are always created even if custom fields fail
+
+---
+
+## 2026-02-23 — Auto-Create Project Wired to Flow
+
+- Wired auto-create Asana project into task creation flow and UI
+- Each meeting now creates its own Asana project; tasks assigned to new project
+- Slack notification includes project link
+- create-tasks accepts optional project_gid; notify-slack accepts optional project_url
+
+---
+
+## 2026-02-23 — Create Project Route
+
+- Added create-project route — auto-creates Asana project per meeting
+- POST /api/meeting-to-actions/create-project with meeting_title and date
+- Adds Priority and Status custom fields to new project
+- Returns project_gid, project_name, project_url on success; fallback_project_gid on failure
+
+---
+
 ## 2026-02-23 — Fathom Meetings 503 Fix
 
 - Fixed fathom-meetings 503 — added timeout handling, env var check, Vercel function config (maxDuration, force-dynamic)
