@@ -68,14 +68,13 @@ export async function POST(request: Request) {
     const meeting_title = body.meeting_title ?? "";
     const date = body.date ?? "";
     const projectGidFromBody = typeof body.project_gid === "string" ? body.project_gid.trim() : "";
+    const pf = (body as Record<string, unknown>).priority_field_gid as string | undefined;
+    const ph = (body as Record<string, unknown>).priority_high_gid as string | undefined;
+    const pm = (body as Record<string, unknown>).priority_medium_gid as string | undefined;
+    const pl = (body as Record<string, unknown>).priority_low_gid as string | undefined;
     const priorityOverrides =
-      body.priority_field_gid && body.priority_high_gid && body.priority_medium_gid && body.priority_low_gid
-        ? {
-            field: body.priority_field_gid,
-            high: body.priority_high_gid,
-            medium: body.priority_medium_gid,
-            low: body.priority_low_gid,
-          }
+      pf && ph && pm && pl
+        ? { field: pf, high: ph, medium: pm, low: pl }
         : null;
 
     console.log("[Create tasks] priorityOverrides from request:", priorityOverrides ? "present" : "null", "project_gid:", projectGidFromBody || "(env default)");
