@@ -14,6 +14,10 @@ type CreateTasksBody = {
   meeting_title: string;
   date: string;
   project_gid?: string;
+  priority_field_gid?: string;
+  priority_high_gid?: string;
+  priority_medium_gid?: string;
+  priority_low_gid?: string;
 };
 
 function formatDueDate(dueDate: string | undefined): string | undefined {
