@@ -55,9 +55,9 @@ function getPriorityEnumGid(
 
 export async function POST(request: Request) {
   try {
-    let body: CreateTasksBody;
+    let body: Record<string, unknown>;
     try {
-      body = (await request.json()) as CreateTasksBody;
+      body = (await request.json()) as Record<string, unknown>;
     } catch {
       return NextResponse.json(
         { error: "Invalid JSON body" },
@@ -65,13 +65,13 @@ export async function POST(request: Request) {
       );
     }
     const actions = Array.isArray(body.actions) ? body.actions : [];
-    const meeting_title = body.meeting_title ?? "";
-    const date = body.date ?? "";
+    const meeting_title = String(body.meeting_title ?? "");
+    const date = String(body.date ?? "");
     const projectGidFromBody = typeof body.project_gid === "string" ? body.project_gid.trim() : "";
-    const pf = (body as Record<string, unknown>).priority_field_gid as string | undefined;
-    const ph = (body as Record<string, unknown>).priority_high_gid as string | undefined;
-    const pm = (body as Record<string, unknown>).priority_medium_gid as string | undefined;
-    const pl = (body as Record<string, unknown>).priority_low_gid as string | undefined;
+    const pf = typeof body.priority_field_gid === "string" ? body.priority_field_gid : undefined;
+    const ph = typeof body.priority_high_gid === "string" ? body.priority_high_gid : undefined;
+    const pm = typeof body.priority_medium_gid === "string" ? body.priority_medium_gid : undefined;
+    const pl = typeof body.priority_low_gid === "string" ? body.priority_low_gid : undefined;
     const priorityOverrides =
       pf && ph && pm && pl
         ? { field: pf, high: ph, medium: pm, low: pl }
