@@ -325,7 +325,7 @@ export default function MeetingToActionsTool() {
       const res = await fetch("/api/meeting-to-actions/notify-slack", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ meeting_title: meeting.meeting_title, date: meeting.date, tasks, gmail_link: gmailLink }),
+        body: JSON.stringify({ meeting_title: meeting.meeting_title, date: meeting.date, tasks, gmail_link: gmailLink, project_url: projectUrl ?? undefined }),
       });
       const data = (await res.json()) as { success?: boolean; error?: string };
       if (data.success) setSlackSuccess(true);

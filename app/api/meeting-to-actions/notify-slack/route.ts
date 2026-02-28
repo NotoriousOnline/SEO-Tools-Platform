@@ -29,6 +29,7 @@ export async function POST(request: Request) {
     const date = body.date ?? "";
     const tasks = Array.isArray(body.tasks) ? body.tasks : [];
     const gmail_link = body.gmail_link ?? "";
+    const project_url = body.project_url ?? "";
 
     const webhookUrl = process.env.SLACK_WEBHOOK_URL;
     if (!webhookUrl) {

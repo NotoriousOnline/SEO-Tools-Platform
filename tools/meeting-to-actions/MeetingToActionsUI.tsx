@@ -52,6 +52,7 @@ type Props = {
   processComplete: boolean;
   slackActive: boolean;
   onProcess: () => void;
+  onCancelProcess: () => void;
   onLoadAndProcess: () => void;
   onPushAsana: () => void;
   onCreateDraft: () => void;
