@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback, useRef } from "react";
+import { PasswordGate } from "@/components/PasswordGate";
 import { MeetingToActionsUI } from "./MeetingToActionsUI";
 import type { MeetingPayload, ActionItem, EmailDraft, TaskResult } from "./types";
 
@@ -356,7 +357,8 @@ export default function MeetingToActionsTool() {
   ].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
 
   return (
-    <MeetingToActionsUI
+    <PasswordGate toolName="Meeting to Actions">
+      <MeetingToActionsUI
       activeTab={activeTab}
       setActiveTab={setActiveTab}
       incomingMeeting={meetingFromWebhook}
@@ -409,5 +411,6 @@ export default function MeetingToActionsTool() {
       onCreateDraft={handleCreateDraft}
       onNotifySlack={handleNotifySlack}
     />
+    </PasswordGate>
   );
 }
