@@ -5,6 +5,8 @@
   "scripts": {
     "dev": "next dev",
     "build": "next build",
+    "clean": "node -e \"require('fs').rmSync('.next',{recursive:true,force:true})\"",
+    "rebuild": "npm run clean && next build",
     "start": "next start",
     "lint": "next lint",
     "test:e2e": "node scripts/e2e-meeting-to-actions.mjs"
