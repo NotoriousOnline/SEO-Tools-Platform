@@ -1,13 +1,16 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { useState } from "react";
 import { tools } from "@/lib/toolRegistry";
+import { PasswordGatePopup } from "./PasswordGatePopup";
 
 export function Sidebar() {
   const pathname = usePathname();
+  const router = useRouter();
   const [mobileOpen, setMobileOpen] = useState(false);
+  const [passwordTool, setPasswordTool] = useState<string | null>(null);
 
   const isActive = (href: string) => {
     if (href === "/") return pathname === "/";
@@ -85,6 +88,20 @@ export function Sidebar() {
           mobileOpen ? "translate-x-0" : "-translate-x-full"
         }`}
       >
+        {passwordTool && (() => {
+          const tool = tools.find((t) => t.slug === passwordTool);
+          return tool ? (
+            <PasswordGatePopup
+              toolName={tool.name}
+              onSuccess={() => {
+                setPasswordTool(null);
+                setMobileOpen(false);
+                router.push(`/tools/${tool.slug}`);
+              }}
+              onClose={() => setPasswordTool(null)}
+            />
+          ) : null;
+        })()}
         <span className="absolute right-4 top-4 md:hidden">
           <button
             type="button"

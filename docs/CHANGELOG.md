@@ -1,5 +1,22 @@
 # Changelog
 
+## 2026-02-25 — Password Gate UI for Meeting to Actions
+
+- Added PasswordGate component. Meeting to Actions tool now password protected.
+- Session persists until browser tab is closed (sessionStorage).
+- Reusable: any tool can wrap with `<PasswordGate toolName="Tool Name">` to add password protection.
+
+---
+
+## 2026-02-25 — Password Protection for Meeting to Actions
+
+- Added TOOL_PASSWORD env var and verify-password API route
+- POST /api/auth/verify-password accepts `{ password: string }`, compares against TOOL_PASSWORD
+- Returns `{ success: true, token: "authenticated" }` on match, `{ success: false }` with 401 on mismatch
+- Returns 500 with warning when TOOL_PASSWORD is not set
+
+---
+
 ## 2026-02-24 — resolveOwner Import, Project Creation Fix
 
 - Fixed resolveOwner import error in create-tasks route
