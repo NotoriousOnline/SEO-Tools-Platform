@@ -4,4 +4,5 @@ export const config = {
   description:
     "Convert Fathom meeting recordings into client emails and Asana tasks automatically.",
   icon: "🎙️",
+  requiresPassword: true,
 };

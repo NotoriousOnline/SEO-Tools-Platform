@@ -7,6 +7,7 @@ export type ToolConfig = {
   name: string;
   description?: string;
   icon?: string;
+  requiresPassword?: boolean;
 };
 
 export const tools: ToolConfig[] = [
@@ -15,6 +16,7 @@ export const tools: ToolConfig[] = [
     name: meetingToActionsConfig.name,
     description: meetingToActionsConfig.description,
     icon: meetingToActionsConfig.icon,
+    requiresPassword: meetingToActionsConfig.requiresPassword,
   },
 ];
 
