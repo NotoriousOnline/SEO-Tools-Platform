@@ -1,5 +1,11 @@
 # Changelog
 
+## 2026-02-25 — Article Title Discovery Tool Scaffold
+
+- Added Article Title Discovery tool scaffold.
+
+---
+
 ## 2026-02-25 — Password Gate UI for Meeting to Actions
 
 - Added PasswordGate component. Meeting to Actions tool now password protected.
