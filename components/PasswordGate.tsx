@@ -33,18 +33,22 @@ export function PasswordGate({ children, toolName = "Meeting to Actions" }: Pass
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ password }),
       });
-      const data = (await res.json()) as { success?: boolean };
+      const data = (await res.json()) as { success?: boolean; error?: string };
       if (data.success) {
         sessionStorage.setItem(STORAGE_KEY, "true");
         setAuthenticated(true);
         setPassword("");
       } else {
-        setError("Incorrect password. Try again.");
+        setError(
+          data.error && res.status >= 500
+            ? data.error
+            : "Incorrect password. Try again."
+        );
         setPassword("");
         inputRef.current?.focus();
       }
     } catch {
-      setError("Incorrect password. Try again.");
+      setError("Could not reach the server. Try again.");
       setPassword("");
       inputRef.current?.focus();
     } finally {

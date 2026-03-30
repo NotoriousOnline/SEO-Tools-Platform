@@ -3,10 +3,11 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
+    "predev": "node scripts/clean-next.cjs",
     "dev": "next dev",
-    "dev:turbo": "next dev --turbo",
+    "dev:turbo": "node scripts/clean-next.cjs && next dev --turbo",
     "build": "next build",
-    "clean": "node -e \"require('fs').rmSync('.next',{recursive:true,force:true})\"",
+    "clean": "node scripts/clean-next.cjs",
     "rebuild": "npm run clean && next build",
     "start": "next start",
     "lint": "next lint",

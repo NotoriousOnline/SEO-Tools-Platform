@@ -72,7 +72,9 @@ export default function MeetingToActionsTool() {
   const handleLoadFathomMeetings = useCallback(async () => {
     setFathomLoading(true);
     try {
-      const res = await fetch("/api/meeting-to-actions/fathom-meetings?limit=20");
+      const res = await fetch("/api/meeting-to-actions/fathom-meetings?limit=20", {
+        cache: "no-store",
+      });
       const data = (await res.json()) as { meetings?: MeetingPayload[]; error?: string; hint?: string };
       if (Array.isArray(data.meetings)) setFathomMeetings(data.meetings);
       const errParts = [data.error, data.hint].filter(Boolean);
