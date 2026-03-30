@@ -3,19 +3,19 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
+    "predev": "node scripts/clean-next.cjs",
     "dev": "next dev",
-    "dev:turbo": "next dev --turbo",
+    "dev:turbo": "node scripts/clean-next.cjs && next dev --turbo",
     "build": "next build",
-    "clean": "node -e \"require('fs').rmSync('.next',{recursive:true,force:true})\"",
+    "clean": "node scripts/clean-next.cjs",
     "rebuild": "npm run clean && next build",
     "start": "next start",
-    "lint": "next lint"
+    "lint": "next lint",
+    "test:e2e": "node scripts/e2e-meeting-to-actions.mjs"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.78.0",
-    "@google/genai": "^1.45.0",
-    "sharp": "^0.33.5",
-    "@supabase/supabase-js": "^2.47.10",
+    "googleapis": "^171.4.0",
     "next": "14.2.18",
     "react": "^18.3.1",
     "react-dom": "^18.3.1"

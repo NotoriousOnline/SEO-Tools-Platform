@@ -52,9 +52,9 @@ function isRateLimitError(err: unknown): boolean {
 export async function callClaude(
   systemPrompt: string,
   userMessage: string,
-  opts?: { maxTokens?: number }
+  options?: { maxTokens?: number }
 ): Promise<string> {
-  const maxTokens = opts?.maxTokens ?? 2048;
+  const maxTokens = options?.maxTokens ?? 2048;
   let lastErr: unknown;
   for (let attempt = 0; attempt <= MAX_429_RETRIES; attempt++) {
     try {

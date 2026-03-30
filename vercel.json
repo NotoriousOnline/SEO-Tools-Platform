@@ -1,5 +1,0 @@
-{
-  "crons": [
-    { "path": "/api/article-title-discovery/run", "schedule": "0 18 * * *" }
-  ]
-}
