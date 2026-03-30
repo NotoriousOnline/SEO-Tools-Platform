@@ -63,6 +63,17 @@ function escapeHtmlAttr(s: string): string {
   return s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
 }
 
+/** Featured image at top of body HTML (in addition to WordPress featured_media). */
+function prependFeaturedImageToBody(html: string, imageUrl: string, alt: string): string {
+  const trimmed = html.trimStart();
+  const head = trimmed.slice(0, 1200);
+  if (/^<figure/i.test(trimmed) && head.includes(imageUrl)) {
+    return html;
+  }
+  const figure = `<figure class="wp-block-image"><img src="${escapeHtmlAttr(imageUrl)}" alt="${escapeHtmlAttr(alt)}" /></figure>\n\n`;
+  return figure + trimmed;
+}
+
 type InContentPlacement = { url: string; alt: string; h2Index: number; order: number };
 
 function injectInContentImages(html: string, placements: InContentPlacement[]): string {
@@ -175,18 +186,24 @@ export async function postPublish(request: Request, toolScope: WPToolScope) {
       .sort((a, b) => a.index - b.index);
 
     let featuredMediaId: number | undefined;
+    let featuredImageUrlForBody: string | undefined;
+    let featuredImageAltForBody: string | undefined;
 
     if (featuredImg) {
       if (isPreUploaded(featuredImg)) {
         featuredMediaId = featuredImg.mediaId;
+        featuredImageUrlForBody = featuredImg.url;
+        featuredImageAltForBody = featuredImg.altText ?? title.slice(0, 125);
       } else if ("base64" in featuredImg && featuredImg.base64) {
         const buf = Buffer.from(featuredImg.base64, "base64");
         const { buffer, mimeType, ext } = await compressImageForUpload(buf, featuredImg.mimeType ?? "image/png");
         const slug = (featuredImg.fileSlug ?? "featured").replace(/[^a-z0-9-]/gi, "-").slice(0, 60);
-        const { id } = await uploadMedia(site, buffer, `${slug}.${ext}`, mimeType);
+        const { id, url } = await uploadMedia(site, buffer, `${slug}.${ext}`, mimeType);
         featuredMediaId = id;
+        featuredImageUrlForBody = url;
+        featuredImageAltForBody = featuredImg.altText ?? title.slice(0, 125);
         await updateMediaDetails(site, id, {
-          alt_text: featuredImg.altText ?? title.slice(0, 125),
+          alt_text: featuredImageAltForBody,
           title: slug.replace(/-/g, " ").replace(/\b\w/g, (c) => c.toUpperCase()),
         });
       }
@@ -227,7 +244,11 @@ export async function postPublish(request: Request, toolScope: WPToolScope) {
     }
 
     const bodyHtml = stripLeadingPostTitleH1(typeof content === "string" ? content : "");
-    const withImages = injectInContentImages(bodyHtml, placements);
+    const withFeaturedAtStart =
+      featuredImageUrlForBody != null && featuredImageUrlForBody.trim() !== ""
+        ? prependFeaturedImageToBody(bodyHtml, featuredImageUrlForBody.trim(), featuredImageAltForBody ?? title.slice(0, 125))
+        : bodyHtml;
+    const withImages = injectInContentImages(withFeaturedAtStart, placements);
     const finalContent = appendReferenceDisclaimer(withImages, referenceUrl);
     const { id: postId, link, editUrl, status } = await createPost(site, title, finalContent);
     if (featuredMediaId != null && featuredMediaId > 0) {
