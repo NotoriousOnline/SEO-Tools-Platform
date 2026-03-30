@@ -4,6 +4,7 @@
   "private": true,
   "scripts": {
     "dev": "next dev",
+    "dev:turbo": "next dev --turbo",
     "build": "next build",
     "clean": "node -e \"require('fs').rmSync('.next',{recursive:true,force:true})\"",
     "rebuild": "npm run clean && next build",
@@ -13,6 +14,8 @@
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.78.0",
+    "@google/genai": "^1.45.0",
+    "sharp": "^0.33.5",
     "@supabase/supabase-js": "^2.47.10",
     "googleapis": "^171.4.0",
     "next": "14.2.18",

@@ -1,5 +1,35 @@
 # Changelog
 
+## 2026-02-25 — Article Title Discovery UI
+
+- Built Article Title Discovery UI.
+
+---
+
+## 2026-02-25 — Article Title Discovery Slack and Cron
+
+- Added Slack delivery, orchestrator, and daily cron for Article Title Discovery.
+
+---
+
+## 2026-02-25 — Article Title Discovery Generate Titles Route
+
+- Added generate-titles route for Article Title Discovery.
+
+---
+
+## 2026-02-25 — Article Title Discovery Fetch Route
+
+- Added fetch-articles route for Article Title Discovery.
+
+---
+
+## 2026-02-25 — Article Title Discovery Env and RSS Config
+
+- Added env vars and RSS feed config for Article Title Discovery.
+
+---
+
 ## 2026-02-25 — Article Title Discovery Tool Scaffold
 
 - Added Article Title Discovery tool scaffold.

@@ -4,4 +4,5 @@ export const config = {
   description:
     "Discovers 20 fresh article title ideas daily for green.org from top environmental news RSS feeds.",
   icon: "Newspaper",
+  requiresPassword: false,
 };
