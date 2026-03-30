@@ -10,11 +10,13 @@ const client = new Anthropic({
  */
 export async function callClaude(
   systemPrompt: string,
-  userMessage: string
+  userMessage: string,
+  options?: { maxTokens?: number }
 ): Promise<string> {
+  const max_tokens = options?.maxTokens ?? 2048;
   const response = await client.messages.create({
     model: "claude-sonnet-4-6",
-    max_tokens: 2048,
+    max_tokens,
     system: systemPrompt,
     messages: [{ role: "user", content: userMessage }],
   });

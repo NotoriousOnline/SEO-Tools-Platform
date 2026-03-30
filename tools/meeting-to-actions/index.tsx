@@ -53,6 +53,7 @@ export default function MeetingToActionsTool() {
   const [meetings, setMeetings] = useState<MeetingPayload[]>([]);
   const [fathomMeetings, setFathomMeetings] = useState<MeetingPayload[]>([]);
   const [fathomLoading, setFathomLoading] = useState(false);
+  const [pastMeetingsError, setPastMeetingsError] = useState<string | null>(null);
   const [meetingFromWebhook, setMeetingFromWebhook] = useState<MeetingPayload | null>(null);
   const [meetingSource, setMeetingSource] = useState<"webhook" | "past">("webhook");
   const meetingSourceRef = useRef(meetingSource);
@@ -72,11 +73,12 @@ export default function MeetingToActionsTool() {
     setFathomLoading(true);
     try {
       const res = await fetch("/api/meeting-to-actions/fathom-meetings?limit=20");
-      const data = (await res.json()) as { meetings?: MeetingPayload[]; error?: string };
-      if (data.meetings) setFathomMeetings(data.meetings);
-      else if (data.error) setProcessError(data.error);
+      const data = (await res.json()) as { meetings?: MeetingPayload[]; error?: string; hint?: string };
+      if (Array.isArray(data.meetings)) setFathomMeetings(data.meetings);
+      const errParts = [data.error, data.hint].filter(Boolean);
+      setPastMeetingsError(errParts.length > 0 ? errParts.join(" ") : null);
     } catch (err) {
-      setProcessError(err instanceof Error ? err.message : "Failed to load Fathom meetings");
+      setPastMeetingsError(err instanceof Error ? err.message : "Failed to load Fathom meetings");
     } finally {
       setFathomLoading(false);
     }
@@ -375,6 +377,7 @@ export default function MeetingToActionsTool() {
       meetingSource={meetingSource}
       meeting={meeting}
       meetings={allPastMeetings}
+      pastMeetingsError={pastMeetingsError}
       fathomLoading={fathomLoading}
       onSelectMeeting={handleSelectMeeting}
       onClearSelection={() => { setMeeting(meetingFromWebhook); setMeetingSource("webhook"); }}

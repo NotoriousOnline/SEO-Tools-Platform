@@ -13,6 +13,7 @@ type Props = {
   meetingSource: "webhook" | "past";
   meeting: MeetingPayload | null;
   meetings: MeetingPayload[];
+  pastMeetingsError: string | null;
   fathomLoading: boolean;
   onSelectMeeting: (m: MeetingPayload) => void;
   onClearSelection?: () => void;
@@ -68,6 +69,7 @@ export function MeetingToActionsUI(props: Props) {
     meetingSource,
     meeting,
     meetings,
+    pastMeetingsError,
     fathomLoading,
     onSelectMeeting,
     onClearSelection,
@@ -231,6 +233,9 @@ export function MeetingToActionsUI(props: Props) {
               </svg>
             </div>
           </button>
+          {pastMeetingsError && (
+            <p className="mb-3 rounded-xl bg-amber-50 px-4 py-2.5 text-sm text-amber-900">{pastMeetingsError}</p>
+          )}
           {pastMeetingsOpen && (
           <>
           {selectedMeeting && (
@@ -283,7 +288,9 @@ export function MeetingToActionsUI(props: Props) {
                 </svg>
               </div>
               <p className="text-sm text-slate-500">No past meetings yet</p>
-              <p className="mt-0.5 text-xs text-slate-400">Use webhook or wait for meetings to load</p>
+              <p className="mt-0.5 text-xs text-slate-400">
+                Webhook history is in-memory (resets when the dev server restarts). Fathom list needs FATHOM_API_KEY in .env.local.
+              </p>
             </div>
           ) : (
             <ul className="max-h-52 space-y-2 overflow-y-auto pr-1">
