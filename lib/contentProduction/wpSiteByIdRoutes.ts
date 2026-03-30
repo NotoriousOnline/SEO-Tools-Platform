@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { errorMessage, serverLog } from "@/lib/serverLog";
 import { deleteSite, getSiteById, updateSite, type UpdateSiteData, type WPToolScope } from "@/lib/wpSites";
 
 const MASKED_PASSWORD = "••••••••";
@@ -13,6 +14,7 @@ export async function handleSiteDELETE(id: string, scope: WPToolScope) {
     return NextResponse.json({ success: true });
   } catch (err) {
     console.error("[sites] DELETE error:", err);
+    void serverLog({ level: "error", source: "wp_sites/DELETE", message: errorMessage(err) });
     return NextResponse.json({ error: "Failed to delete site" }, { status: 500 });
   }
 }
@@ -36,6 +38,7 @@ export async function handleSitePUT(request: Request, id: string, scope: WPToolS
     return NextResponse.json(maskSite(site));
   } catch (err) {
     console.error("[sites] PUT error:", err);
+    void serverLog({ level: "error", source: "wp_sites/PUT", message: errorMessage(err) });
     return NextResponse.json({ error: "Failed to update site" }, { status: 500 });
   }
 }

@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { callClaude } from "@/lib/anthropic";
+import { errorMessage, serverLog } from "@/lib/serverLog";
 import { generateImage } from "@/lib/geminiClient";
 import { WP_TOOL_SCOPE, type WPToolScope } from "@/lib/wpSites";
 
@@ -238,8 +239,9 @@ Target: 1 featured + ${inContentTarget} in-content images.`;
 
     return NextResponse.json(results);
   } catch (err) {
-    const msg = err instanceof Error ? err.message : String(err);
+    const msg = errorMessage(err);
     console.error("[generate-images] Error:", msg);
+    void serverLog({ level: "error", source: "content-production/generate-images", message: msg });
     return NextResponse.json(
       { error: msg || "Failed to generate images" },
       { status: 500 }

@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { serverLog } from "@/lib/serverLog";
 import { describeFetchError, serverFetchOrigin } from "@/lib/serverFetch";
 
 export const maxDuration = 120;
@@ -12,6 +13,11 @@ export async function GET(request: Request) {
     fetchRes = await fetch(`${base}/api/article-title-discovery/fetch-articles`);
   } catch (err) {
     console.error("[article-title-discovery/run] Fetch articles network error:", err);
+    void serverLog({
+      level: "error",
+      source: "article-title-discovery/run",
+      message: `fetch-articles network: ${describeFetchError(err)}`,
+    });
     return NextResponse.json(
       {
         success: false,
@@ -22,6 +28,11 @@ export async function GET(request: Request) {
   }
   if (!fetchRes.ok) {
     console.error("[article-title-discovery/run] Fetch articles failed:", fetchRes.status);
+    void serverLog({
+      level: "error",
+      source: "article-title-discovery/run",
+      message: `fetch-articles HTTP ${fetchRes.status}`,
+    });
     return NextResponse.json(
       { success: false, error: "Fetch articles failed" },
       { status: 502 }
@@ -48,6 +59,11 @@ export async function GET(request: Request) {
     });
   } catch (err) {
     console.error("[article-title-discovery/run] Generate titles network error:", err);
+    void serverLog({
+      level: "error",
+      source: "article-title-discovery/run",
+      message: `generate-titles network: ${describeFetchError(err)}`,
+    });
     return NextResponse.json(
       { success: false, error: `Could not call generate-titles: ${describeFetchError(err)}` },
       { status: 502 }
@@ -55,6 +71,11 @@ export async function GET(request: Request) {
   }
   if (!generateRes.ok) {
     console.error("[article-title-discovery/run] Generate titles failed:", generateRes.status);
+    void serverLog({
+      level: "error",
+      source: "article-title-discovery/run",
+      message: `generate-titles HTTP ${generateRes.status}`,
+    });
     return NextResponse.json(
       { success: false, error: "Generate titles failed" },
       { status: 502 }
@@ -81,6 +102,11 @@ export async function GET(request: Request) {
     });
   } catch (err) {
     console.error("[article-title-discovery/run] Slack step network error:", err);
+    void serverLog({
+      level: "error",
+      source: "article-title-discovery/run",
+      message: `send-to-slack network: ${describeFetchError(err)}`,
+    });
     return NextResponse.json(
       { success: false, error: `Could not call send-to-slack: ${describeFetchError(err)}` },
       { status: 502 }
@@ -89,6 +115,12 @@ export async function GET(request: Request) {
   if (!slackRes.ok) {
     const errBody = await slackRes.json().catch(() => ({}));
     console.error("[article-title-discovery/run] Send to Slack failed:", slackRes.status, errBody);
+    void serverLog({
+      level: "error",
+      source: "article-title-discovery/run",
+      message: `send-to-slack HTTP ${slackRes.status}`,
+      meta: typeof errBody === "object" && errBody !== null ? (errBody as Record<string, unknown>) : undefined,
+    });
     return NextResponse.json(
       { success: false, error: "Send to Slack failed" },
       { status: 502 }

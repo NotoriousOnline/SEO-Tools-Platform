@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import Anthropic from "@anthropic-ai/sdk";
 import { fetchMatchingTermsByVolume } from "@/lib/ahrefsClient";
+import { errorMessage, serverLog } from "@/lib/serverLog";
 import { WP_TOOL_SCOPE, type WPToolScope } from "@/lib/wpSites";
 
 function extractJsonObject(text: string): unknown {
@@ -206,8 +207,9 @@ Include 8–12 distinct phrases total (fewer overlaps if Ahrefs terms were liste
       },
     });
   } catch (err) {
-    const msg = err instanceof Error ? err.message : String(err);
+    const msg = errorMessage(err);
     console.error("[extract-keywords]", msg);
+    void serverLog({ level: "error", source: "content-production/extract-keywords", message: msg });
     return NextResponse.json({ error: msg || "Failed to extract keywords" }, { status: 500 });
   }
 }

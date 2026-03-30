@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { describeFetchError, explainSupabaseReachabilityError } from "@/lib/serverFetch";
+import { errorMessage, serverLog } from "@/lib/serverLog";
 import { wpRestHeaders } from "@/lib/wordpressClient";
 import { createSite, getSites, type CreateSiteData, type WPToolScope } from "@/lib/wpSites";
 
@@ -36,6 +37,11 @@ export async function handleSitesGET(scope: WPToolScope) {
     return NextResponse.json(sites.map(maskSite));
   } catch (err) {
     console.error("[sites] GET error:", err);
+    void serverLog({
+      level: "error",
+      source: "wp_sites/GET",
+      message: errorMessage(err),
+    });
     const supabaseHint = explainSupabaseReachabilityError(err);
     if (supabaseHint) {
       return NextResponse.json({ error: supabaseHint }, { status: 503 });
@@ -82,6 +88,11 @@ export async function handleSitesPOST(request: Request, scope: WPToolScope) {
     return NextResponse.json(maskSite(site));
   } catch (err) {
     console.error("[sites] POST error:", err);
+    void serverLog({
+      level: "error",
+      source: "wp_sites/POST",
+      message: errorMessage(err),
+    });
     const supabaseHint = explainSupabaseReachabilityError(err);
     if (supabaseHint) {
       return NextResponse.json({ error: supabaseHint }, { status: 503 });

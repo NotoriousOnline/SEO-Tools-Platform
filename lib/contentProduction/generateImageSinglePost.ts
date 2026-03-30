@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { generateImage } from "@/lib/geminiClient";
+import { errorMessage, serverLog } from "@/lib/serverLog";
 
 export async function postGenerateImageSingle(request: Request) {
   try {
@@ -16,8 +17,9 @@ export async function postGenerateImageSingle(request: Request) {
     const { base64, mimeType } = await generateImage(prompt);
     return NextResponse.json({ base64, mimeType });
   } catch (err) {
-    const msg = err instanceof Error ? err.message : String(err);
+    const msg = errorMessage(err);
     console.error("[generate-images/single] Error:", msg);
+    void serverLog({ level: "error", source: "content-production/generate-image-single", message: msg });
     return NextResponse.json(
       { error: msg || "Failed to generate image" },
       { status: 500 }

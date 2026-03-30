@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import Anthropic from "@anthropic-ai/sdk";
+import { errorMessage, serverLog } from "@/lib/serverLog";
 import { stripLeadingPostTitleH1 } from "@/lib/postHtml";
 import { getSiteById, WP_TOOL_SCOPE, type WPToolScope } from "@/lib/wpSites";
 import { getPosts } from "@/lib/wordpressClient";
@@ -146,8 +147,9 @@ Write the full HTML blog post. Include the FAQ block as specified (1 or 2 FAQ su
       wordCount: wordCountActual,
     });
   } catch (err) {
-    const msg = err instanceof Error ? err.message : String(err);
+    const msg = errorMessage(err);
     console.error("[generate-content] Error:", msg);
+    void serverLog({ level: "error", source: "content-production/generate-content", message: msg });
     return NextResponse.json(
       { error: msg || "Failed to generate content" },
       { status: 500 }

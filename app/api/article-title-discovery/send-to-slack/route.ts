@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { errorMessage, serverLog } from "@/lib/serverLog";
 
 type ResultItem = {
   suggested_title: string;
@@ -19,6 +20,11 @@ function formatDate(): string {
 export async function POST(request: Request) {
   const webhookUrl = process.env.ARTICLE_SLACK_WEBHOOK_URL;
   if (!webhookUrl) {
+    void serverLog({
+      level: "error",
+      source: "article-title-discovery/send-to-slack",
+      message: "ARTICLE_SLACK_WEBHOOK_URL is not set",
+    });
     return NextResponse.json(
       { success: false, error: "ARTICLE_SLACK_WEBHOOK_URL is not set" },
       { status: 500 }
@@ -66,6 +72,11 @@ export async function POST(request: Request) {
     if (!res.ok) {
       const errText = await res.text();
       console.error("[send-to-slack] Slack webhook error:", res.status, errText);
+      void serverLog({
+        level: "error",
+        source: "article-title-discovery/send-to-slack",
+        message: `Slack webhook HTTP ${res.status}: ${errText.slice(0, 500)}`,
+      });
       return NextResponse.json(
         { success: false, error: `Slack webhook failed: ${res.status}` },
         { status: 502 }
@@ -73,6 +84,11 @@ export async function POST(request: Request) {
     }
   } catch (err) {
     console.error("[send-to-slack] Fetch error:", err);
+    void serverLog({
+      level: "error",
+      source: "article-title-discovery/send-to-slack",
+      message: errorMessage(err),
+    });
     return NextResponse.json(
       { success: false, error: "Failed to send to Slack" },
       { status: 502 }

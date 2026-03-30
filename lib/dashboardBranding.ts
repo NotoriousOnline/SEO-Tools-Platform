@@ -35,6 +35,15 @@ export const homeSidebarNav: SidebarNavTokens = {
   iconIdle: "bg-white/[0.06] text-slate-500 group-hover:bg-white/10 group-hover:text-indigo-200",
 };
 
+export const logsSidebarNav: SidebarNavTokens = {
+  bar: "bg-amber-400",
+  rowActive:
+    "bg-amber-500/[0.2] text-amber-50 shadow-[inset_0_1px_0_0_rgba(255,255,255,0.06)] ring-1 ring-amber-400/25",
+  rowIdle: "text-slate-400 hover:bg-white/[0.06] hover:text-amber-100",
+  iconActive: "bg-amber-500/40 text-amber-50 ring-1 ring-amber-300/25",
+  iconIdle: "bg-white/[0.06] text-slate-500 group-hover:text-amber-200",
+};
+
 type ToolTheme = {
   headerAccent: string;
   cardBlob: string;
@@ -117,7 +126,8 @@ export function getToolTheme(slug: string): ToolTheme {
   return themes[slug] ?? defaultTheme;
 }
 
-export function getSidebarNav(slug: "home" | string): SidebarNavTokens {
+export function getSidebarNav(slug: "home" | "logs" | string): SidebarNavTokens {
   if (slug === "home") return homeSidebarNav;
+  if (slug === "logs") return logsSidebarNav;
   return getToolTheme(slug).sidebarNav;
 }

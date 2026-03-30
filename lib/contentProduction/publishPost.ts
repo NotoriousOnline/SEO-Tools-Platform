@@ -9,6 +9,7 @@ import {
   updateMediaDetails,
   updatePostYoastMeta,
 } from "@/lib/wordpressClient";
+import { errorMessage, serverLog } from "@/lib/serverLog";
 
 const MAX_IMAGE_DIMENSION = 1200;
 const JPEG_QUALITY = 85;
@@ -213,8 +214,13 @@ export async function postPublish(request: Request, toolScope: WPToolScope) {
       yoast: { metaDescriptionSet: yoastOk, focusKeyphrase: focuskw },
     });
   } catch (err) {
-    const msg = err instanceof Error ? err.message : String(err);
+    const msg = errorMessage(err);
     console.error("[publish] Error:", msg);
+    void serverLog({
+      level: "error",
+      source: "content-production/publish",
+      message: msg || "Failed to publish",
+    });
     return NextResponse.json(
       { error: msg || "Failed to publish" },
       { status: 500 }
