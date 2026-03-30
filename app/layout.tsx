@@ -11,8 +11,8 @@ const jakarta = Plus_Jakarta_Sans({
 });
 
 export const metadata: Metadata = {
-  title: "SEO Tools Platform",
-  description: "SEO Tools Platform",
+  title: "Content Studio",
+  description: "Article discovery, SEO content, and WordPress publishing workflows.",
 };
 
 export const viewport: Viewport = {
@@ -28,11 +28,11 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en" className={jakarta.variable}>
-      <body className="relative min-h-screen bg-slate-100/80 font-sans antialiased">
+      <body className="relative min-h-screen bg-indigo-50/40 font-sans antialiased">
         <ParticleBackground />
         <div className="relative z-10 flex min-h-screen">
           <Sidebar />
-          <main className="flex-1 overflow-auto bg-gradient-to-br from-slate-50/90 via-white/90 to-teal-50/70 pt-14 md:pt-0">
+          <main className="flex-1 overflow-auto bg-gradient-to-br from-violet-50/70 via-white to-sky-50/50 pt-14 md:pt-0">
             {children}
           </main>
         </div>
