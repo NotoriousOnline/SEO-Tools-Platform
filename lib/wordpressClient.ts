@@ -51,6 +51,14 @@ export function wpRestHeaders(site: WPSite, opts?: { contentTypeJson?: boolean }
   return h;
 }
 
+export type WPPostListItem = {
+  id: number;
+  title: { rendered: string };
+  link: string;
+  slug: string;
+  excerpt?: { rendered?: string };
+};
+
 export async function getPosts(
   site: WPSite,
   limit: number
@@ -62,6 +70,78 @@ export async function getPosts(
   );
   if (!res.ok) throw new Error(`WP getPosts failed: ${res.status}`);
   return res.json();
+}
+
+export type WPPostsPageHeaders = {
+  posts: WPPostListItem[];
+  /** From X-WP-Total; 0 if header missing. */
+  total: number;
+  /** From X-WP-TotalPages; 0 if header missing (caller should page until empty). */
+  totalPages: number;
+};
+
+/**
+ * One page of posts + WP REST total counts (for full-catalog sync without arbitrary caps).
+ */
+export async function getPostsPageWithHeaders(
+  site: WPSite,
+  page: number,
+  perPage: number
+): Promise<WPPostsPageHeaders> {
+  const base = site.url.replace(/\/$/, "");
+  const res = await fetch(
+    wpRestUrl(base, `wp/v2/posts?per_page=${perPage}&page=${page}&_fields=id,title,link,slug,excerpt`),
+    { headers: wpRestHeaders(site) }
+  );
+  if (res.status === 400) {
+    return { posts: [], total: 0, totalPages: 0 };
+  }
+  if (!res.ok) throw new Error(`WP getPostsPage failed: ${res.status}`);
+  const data = (await res.json()) as WPPostListItem[];
+  const posts = Array.isArray(data) ? data : [];
+  const total = parseInt(res.headers.get("x-wp-total") ?? "", 10);
+  const totalPages = parseInt(res.headers.get("x-wp-totalpages") ?? "", 10);
+  return {
+    posts,
+    total: Number.isFinite(total) ? total : 0,
+    totalPages: Number.isFinite(totalPages) ? totalPages : 0,
+  };
+}
+
+/** Paginated posts for building the internal link library (excerpt helps relevance). */
+export async function getPostsPage(site: WPSite, page: number, perPage: number): Promise<WPPostListItem[]> {
+  const { posts } = await getPostsPageWithHeaders(site, page, perPage);
+  return posts;
+}
+
+const LINK_LIBRARY_PER_PAGE = 100;
+const LINK_LIBRARY_MAX_PAGES_SAFETY = 500;
+
+/**
+ * All published posts visible to the REST user (up to 100 × 500 safety cap).
+ * Uses X-WP-TotalPages when present; otherwise pages until an empty response (some CDNs strip headers).
+ */
+export async function fetchAllPostsForLinkLibrary(site: WPSite): Promise<WPPostListItem[]> {
+  const perPage = LINK_LIBRARY_PER_PAGE;
+  const first = await getPostsPageWithHeaders(site, 1, perPage);
+  const all: WPPostListItem[] = [...first.posts];
+
+  if (first.totalPages > 0) {
+    const lastPage = Math.min(first.totalPages, LINK_LIBRARY_MAX_PAGES_SAFETY);
+    for (let page = 2; page <= lastPage; page++) {
+      const { posts } = await getPostsPageWithHeaders(site, page, perPage);
+      if (posts.length === 0) break;
+      all.push(...posts);
+    }
+  } else if (first.posts.length > 0) {
+    for (let page = 2; page <= LINK_LIBRARY_MAX_PAGES_SAFETY; page++) {
+      const { posts } = await getPostsPageWithHeaders(site, page, perPage);
+      if (posts.length === 0) break;
+      all.push(...posts);
+    }
+  }
+
+  return all;
 }
 
 export async function createPost(

@@ -2,35 +2,13 @@ import { NextResponse } from "next/server";
 import Anthropic from "@anthropic-ai/sdk";
 import { errorMessage, serverLog } from "@/lib/serverLog";
 import { stripLeadingPostTitleH1 } from "@/lib/postHtml";
+import { getCandidatesFromLibrary, pickCandidatesFromLivePosts } from "@/lib/siteLinkLibrary";
 import { getSiteById, WP_TOOL_SCOPE, type WPToolScope } from "@/lib/wpSites";
 import { getPosts } from "@/lib/wordpressClient";
 
-type Post = { id: number; title: { rendered: string }; link: string; slug: string };
-
-function scoreRelevance(post: Post, keywords: string[]): number {
-  const text = `${(post.title?.rendered ?? "").toLowerCase()} ${(post.slug ?? "").toLowerCase()}`;
-  let score = 0;
-  for (const kw of keywords) {
-    if (!kw) continue;
-    const lower = kw.toLowerCase();
-    if (text.includes(lower)) score += 2;
-    const words = text.split(/\s+/);
-    const kwWords = lower.split(/\s+/);
-    for (const kwWord of kwWords) {
-      if (words.some((w) => w.includes(kwWord) || kwWord.includes(w))) score += 1;
-    }
-  }
-  return score;
-}
-
-function pickRelevantPosts(posts: Post[], keywords: string[], count: number): Post[] {
-  if (posts.length === 0) return [];
-  const scored = posts.map((p) => ({ post: p, score: scoreRelevance(p, keywords) }));
-  scored.sort((a, b) => b.score - a.score);
-  const top = scored.filter((s) => s.score > 0).slice(0, count);
-  if (top.length === 0) return posts.slice(0, count);
-  return top.map((s) => s.post);
-}
+/** Richer pool for the model + Supabase library when synced. */
+const INTERNAL_LINK_CANDIDATES_FOR_PROMPT = 14;
+const LIBRARY_USE_MIN = 3;
 
 function replaceEmDashes(html: string): string {
   return html.replace(/\u2014/g, " - ").replace(/\u2013/g, "-");
@@ -79,12 +57,16 @@ export async function postGenerateContent(request: Request, toolScope: WPToolSco
       return NextResponse.json({ error: "Site not found" }, { status: 404 });
     }
 
-    const posts = await getPosts(site, 50);
-    const relevantPosts = pickRelevantPosts(posts, keywords, 3);
-    const internalLinks = relevantPosts.map((p) => ({
-      title: p.title?.rendered ?? p.slug ?? "Untitled",
-      url: p.link,
-    }));
+    let internalLinks = await getCandidatesFromLibrary(
+      site.id,
+      keywords,
+      title,
+      INTERNAL_LINK_CANDIDATES_FOR_PROMPT
+    );
+    if (internalLinks.length < LIBRARY_USE_MIN) {
+      const posts = await getPosts(site, 100);
+      internalLinks = pickCandidatesFromLivePosts(posts, keywords, title, INTERNAL_LINK_CANDIDATES_FOR_PROMPT);
+    }
 
     const tonePrompt = site.tone_prompt ?? "Write in a clear, authoritative, and engaging editorial tone.";
     const systemPrompt = `${tonePrompt}
@@ -115,7 +97,7 @@ Structure: Near the end, include FAQs before any brief closing paragraph:
 
 Keywords: ${keywords.join(", ")}
 
-Internal link candidates (use 2-3 of these):
+Internal link candidates (pick 2-3 that best match nearby content; each URL at most once):
 ${linksText}
 
 Write the full HTML blog post. Include the FAQ block as specified (1 or 2 FAQ subsections by topic fit, bullets in answers where it helps). Remember: no em dash character anywhere in the HTML. Do not output an <h1>; the post title is set only in WordPress. Start with <p> or <h2>.`;

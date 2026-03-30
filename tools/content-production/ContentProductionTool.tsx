@@ -53,6 +53,8 @@ export function ContentProductionTool({
   const [addError, setAddError] = useState<string | null>(null);
   const [addLoading, setAddLoading] = useState(false);
   const [addSuccess, setAddSuccess] = useState(false);
+  const [linkSyncingId, setLinkSyncingId] = useState<string | null>(null);
+  const [linkSyncNotice, setLinkSyncNotice] = useState<string | null>(null);
   const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null);
   const [title, setTitle] = useState("");
   const [keywords, setKeywords] = useState<string[]>([]);
@@ -176,6 +178,24 @@ export function ContentProductionTool({
       setAddError("Request failed");
     } finally {
       setAddLoading(false);
+    }
+  };
+
+  const handleSyncInternalLinks = async (siteId: string) => {
+    setLinkSyncNotice(null);
+    setLinkSyncingId(siteId);
+    try {
+      const res = await fetch(`${api}/sites/${siteId}/sync-internal-links`, { method: "POST" });
+      const data = (await res.json().catch(() => ({}))) as { error?: string; count?: number };
+      if (!res.ok) {
+        setLinkSyncNotice(data.error ?? "Sync failed");
+        return;
+      }
+      setLinkSyncNotice(`Post links updated for this site (${data.count ?? 0} URLs). Product links stay separate when added.`);
+    } catch {
+      setLinkSyncNotice("Network error while syncing links");
+    } finally {
+      setLinkSyncingId(null);
     }
   };
 
@@ -659,23 +679,45 @@ export function ContentProductionTool({
   return (
     <div className="space-y-8">
       {/* Title and description are rendered by ToolLayout */}
-      <div className="flex justify-end">
+      <div className="flex flex-col items-end gap-1">
         <button
           type="button"
           onClick={() => setPanelOpen(!panelOpen)}
-          className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg border border-slate-200 bg-white text-slate-500 transition-colors hover:bg-slate-50 hover:text-slate-700"
+          className="flex items-center gap-2 rounded-lg border border-slate-200 bg-white px-3 py-2 text-slate-600 shadow-sm transition-colors hover:bg-slate-50 hover:text-slate-900"
+          aria-expanded={panelOpen}
           aria-label={panelOpen ? "Close site manager" : "Open site manager"}
         >
-          <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="h-5 w-5">
+          <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="h-5 w-5 shrink-0 text-slate-500">
             <path strokeLinecap="round" strokeLinejoin="round" d="M9.594 3.94c.09-.542.56-.94 1.11-.94h2.593c.55 0 1.02.398 1.11.94l.213 1.281c.063.374.313.686.645.87.074.04.147.083.22.127.324.196.72.257 1.075.124l1.217-.456a1.125 1.125 0 011.37.49l1.296 2.247a1.125 1.125 0 01-.26 1.431l-1.003.827c-.293.24-.438.613-.431.992a6.759 6.759 0 010 .255c-.007.378.138.75.43.99l1.005.828c.424.35.534.954.26 1.43l-1.298 2.247a1.125 1.125 0 01-1.369.491l-1.217-.456c-.355-.133-.75-.072-1.076.124a6.57 6.57 0 01-.22.128c-.331.183-.581.495-.644.869l-.213 1.28c-.09.543-.56.941-1.11.941h-2.594c-.55 0-1.02-.398-1.11-.94l-.213-1.281c-.062-.374-.312-.686-.644-.87a6.52 6.52 0 01-.22-.127c-.325-.196-.72-.257-1.076-.124l-1.217.456a1.125 1.125 0 01-1.369-.49l-1.297-2.247a1.125 1.125 0 01.26-1.431l1.004-.827c.292-.24.437-.613.43-.992a6.932 6.932 0 010-.255c.007-.378-.138-.75-.43-.99l-1.004-.828a1.125 1.125 0 01-.26-1.43l1.297-2.247a1.125 1.125 0 011.37-.491l1.216.456c.356.133.751.072 1.076-.124.072-.044.146-.087.22-.128.332-.183.582-.495.644-.869l.214-1.281z" />
             <path strokeLinecap="round" strokeLinejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
           </svg>
+          <span className="text-sm font-semibold">Site manager</span>
+          <span className="hidden text-xs font-normal text-slate-400 sm:inline">
+            {panelOpen ? "Hide" : "Add sites · Sync post links"}
+          </span>
         </button>
+        {!panelOpen ? (
+          <p className="max-w-md text-right text-[11px] text-slate-400">
+            Open Site manager to add WordPress sites and use{" "}
+            <strong className="font-medium text-slate-500">Sync post links</strong> per site.
+          </p>
+        ) : null}
       </div>
 
       {panelOpen && (
         <div className="rounded-xl border border-slate-200 bg-slate-50/50 p-6">
           <h2 className="mb-4 text-sm font-semibold uppercase tracking-wider text-slate-500">Site Manager</h2>
+          <p className="mb-4 text-xs leading-relaxed text-slate-500">
+            <strong className="font-medium text-slate-600">Internal links:</strong> Each WordPress site has its own rows
+            in Supabase (keyed by site id; nothing mixes between sites). <strong>Sync post links</strong> refreshes
+            blog URLs only; product URLs (e.g. WooCommerce) will use a separate sync with{" "}
+            <code className="rounded bg-slate-200/80 px-1">kind=product</code> later. Run migrations{" "}
+            <code className="rounded bg-slate-200/80 px-1">005</code> and{" "}
+            <code className="rounded bg-slate-200/80 px-1">006_site_internal_links_kind_scope.sql</code>.
+          </p>
+          {linkSyncNotice ? (
+            <p className="mb-3 rounded-lg border border-teal-200 bg-teal-50 px-3 py-2 text-xs text-teal-900">{linkSyncNotice}</p>
+          ) : null}
 
           {/* List of sites */}
           <div className="mb-6 space-y-3">
@@ -728,13 +770,21 @@ export function ContentProductionTool({
                         <p className="font-medium text-slate-900">{site.name}</p>
                         <p className="text-sm text-slate-500">{site.url}</p>
                       </div>
-                      <div className="flex gap-2">
+                      <div className="flex flex-wrap gap-2">
                         <button
                           type="button"
                           onClick={() => startEdit(site)}
                           className="rounded border border-slate-200 px-2 py-1 text-xs text-slate-600 hover:bg-slate-50"
                         >
                           Edit
+                        </button>
+                        <button
+                          type="button"
+                          disabled={linkSyncingId === site.id}
+                          onClick={() => void handleSyncInternalLinks(site.id)}
+                          className="rounded border border-indigo-200 bg-indigo-50 px-2 py-1 text-xs font-medium text-indigo-800 hover:bg-indigo-100 disabled:opacity-50"
+                        >
+                          {linkSyncingId === site.id ? "Syncing posts…" : "Sync post links"}
                         </button>
                         {deleteConfirmId === site.id ? (
                           <>
