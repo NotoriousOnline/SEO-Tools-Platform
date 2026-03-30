@@ -1,6 +1,9 @@
 import { NextResponse } from "next/server";
 import { RSS_FEEDS } from "@/lib/rssFeeds";
 
+/** Avoid prerendering at build time (RSS calls fail or churn and clutter CI logs). */
+export const dynamic = "force-dynamic";
+
 type Article = {
   title: string;
   url: string;

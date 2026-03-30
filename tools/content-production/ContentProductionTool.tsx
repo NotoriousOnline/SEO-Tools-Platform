@@ -28,7 +28,7 @@ type Site = {
 };
 
 export function ContentProductionTool({
-  config,
+  config: _toolConfig,
   apiPrefix = "/api/content-production",
 }: {
   config: ToolConfig;
@@ -564,11 +564,8 @@ export function ContentProductionTool({
 
   return (
     <div className="space-y-8">
-      <div className="flex items-start justify-between gap-4">
-        <div>
-          <h1 className="text-2xl font-bold tracking-tight text-slate-900">{config.name}</h1>
-          <p className="mt-2 text-slate-600">{config.description}</p>
-        </div>
+      {/* Title and description are rendered by ToolLayout */}
+      <div className="flex justify-end">
         <button
           type="button"
           onClick={() => setPanelOpen(!panelOpen)}
