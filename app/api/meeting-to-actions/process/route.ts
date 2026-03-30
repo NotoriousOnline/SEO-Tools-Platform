@@ -1,25 +1,16 @@
 import { NextResponse } from "next/server";
 import { callClaude } from "@/lib/anthropic";
 
-const EMAIL_SYSTEM_PROMPT = `You are a professional meeting summarizer writing on behalf of an agency.
-Extract a concise, client-ready email summary from the meeting content provided.
-Return ONLY valid JSON with no markdown and no code fences, in this exact shape:
+const COMBINED_JSON_SHAPE = `Return ONLY valid JSON with no markdown and no code fences, in this exact shape:
 {
-  "subject": string,
-  "greeting": string,
-  "summary_bullets": string[],
-  "decisions": string[],
-  "next_steps": string[],
-  "closing": string
-}
-Tone: professional, warm, concise.
-Only include content explicitly discussed. Never hallucinate.`;
-
-const ACTIONS_PROMPT_EXPLICIT_ONLY = `You are an expert at extracting action items from meeting content.
-Extract ONLY EXPLICIT action items—directly stated commitments, assignments, or deadlines.
-
-Return ONLY valid JSON with no markdown and no code fences, in this exact shape:
-{
+  "email_draft": {
+    "subject": string,
+    "greeting": string,
+    "summary_bullets": string[],
+    "decisions": string[],
+    "next_steps": string[],
+    "closing": string
+  },
   "actions": [
     {
       "task_title": string,
@@ -30,7 +21,16 @@ Return ONLY valid JSON with no markdown and no code fences, in this exact shape:
       "related_to_client": boolean
     }
   ]
-}
+}`;
+
+const TASK1_EMAIL = `TASK 1 — email_draft:
+You are a professional meeting summarizer writing on behalf of an agency.
+Extract a concise, client-ready email summary from the meeting content provided.
+Tone: professional, warm, concise.
+Only include content explicitly discussed. Never hallucinate.`;
+
+const TASK2_ACTIONS_EXPLICIT_ONLY = `TASK 2 — actions array:
+Extract ONLY EXPLICIT action items—directly stated commitments, assignments, or deadlines.
 
 Rules:
 - Extract from both Summary and Transcript (Transcript is optional but use it when provided)
@@ -42,26 +42,12 @@ Rules:
 - Separate client actions from internal team actions using related_to_client
 - Do NOT prepend [HIGH], [MEDIUM], or [LOW] to task_title — priority is set via a separate field`;
 
-const ACTIONS_PROMPT_EXPLICIT_AND_IMPLICIT = `You are an expert at extracting action items from meeting content.
+const TASK2_ACTIONS_EXPLICIT_AND_IMPLICIT = `TASK 2 — actions array:
 Extract BOTH explicit and implicit operational follow-ups from the Summary and Transcript.
-
-Return ONLY valid JSON with no markdown and no code fences, in this exact shape:
-{
-  "actions": [
-    {
-      "task_title": string,
-      "description": string,
-      "owner": string,
-      "due_date": string,
-      "priority": "High" | "Medium" | "Low",
-      "related_to_client": boolean
-    }
-  ]
-}
 
 Extraction scope:
 - EXPLICIT: Directly stated commitments, assignments, deadlines, or "we need to" / "I will" / "let's" statements
-- IMPLICIT: Logical next steps inferred from discussion tone, context, decisions made, or implied commitments (e.g. if they agreed to a proposal, infer follow-up to implement it; if they discussed a problem, infer follow-up to resolve it)
+- IMPLICIT: Logical next steps inferred from discussion tone, context, decisions made, or implied commitments
 
 Rules:
 - Extract from both Summary and Transcript (Transcript is optional but use it when provided for richer context)
@@ -73,27 +59,40 @@ Rules:
 - Separate client actions from internal team actions using related_to_client
 - Do NOT prepend [HIGH], [MEDIUM], or [LOW] to task_title — priority is set via a separate field`;
 
+function buildCombinedSystemPrompt(
+  extractionMode: "explicit_only" | "explicit_and_implicit"
+): string {
+  const task2 =
+    extractionMode === "explicit_only"
+      ? TASK2_ACTIONS_EXPLICIT_ONLY
+      : TASK2_ACTIONS_EXPLICIT_AND_IMPLICIT;
+  return [
+    "You perform TWO tasks on the same meeting in ONE response (one API round-trip).",
+    COMBINED_JSON_SHAPE,
+    "",
+    TASK1_EMAIL,
+    "",
+    task2,
+  ].join("\n");
+}
+
 /** Extract JSON from Claude response — handles markdown fences, extra text, trailing commas. */
 function extractJson(text: string): string {
   let cleaned = text.trim();
-  // Remove markdown code fences (```json ... ``` or ``` ... ```)
   const fenceMatch = cleaned.match(/```(?:json)?\s*([\s\S]*?)```/);
   if (fenceMatch) {
     cleaned = fenceMatch[1].trim();
   } else {
-    // Remove lines that are only ``` 
     cleaned = cleaned
       .split("\n")
       .filter((line) => !line.trim().startsWith("```"))
       .join("\n")
       .trim();
   }
-  // Try to extract JSON object/array if there's extra text before/after
   const objMatch = cleaned.match(/\{[\s\S]*\}/);
   if (objMatch) {
     cleaned = objMatch[0];
   }
-  // Remove trailing commas before ] or } (invalid but common in LLM output)
   cleaned = cleaned.replace(/,(\s*[}\]])/g, "$1");
   return cleaned;
 }
@@ -133,7 +132,6 @@ export async function POST(request: Request) {
     }
     const meeting_title = body.meeting_title ?? "";
 
-    // E2E test: simulate malformed Claude response
     if (meeting_title === MOCK_MALFORMED_TITLE) {
       return NextResponse.json(
         { error: "Claude returned malformed JSON for email summary" },
@@ -147,10 +145,6 @@ export async function POST(request: Request) {
     const summary = body.summary ?? "";
     const transcript = body.transcript ?? "";
     const extractionMode = body.extraction_mode ?? "explicit_and_implicit";
-    const actionsPrompt =
-      extractionMode === "explicit_only"
-        ? ACTIONS_PROMPT_EXPLICIT_ONLY
-        : ACTIONS_PROMPT_EXPLICIT_AND_IMPLICIT;
 
     const userMessage = [
       `Meeting: ${meeting_title}`,
@@ -164,48 +158,32 @@ export async function POST(request: Request) {
       transcript || "N/A",
     ].join("\n");
 
-    let emailDraft: unknown = null;
-    let actions: unknown[] = [];
+    const systemPrompt = buildCombinedSystemPrompt(extractionMode);
 
+    let raw: string;
     try {
-      const emailResponse = await callClaude(EMAIL_SYSTEM_PROMPT, userMessage);
-      try {
-        emailDraft = parseJsonOrThrow(emailResponse);
-      } catch {
-        return NextResponse.json(
-          { error: "Claude returned malformed JSON for email summary" },
-          { status: 500 }
-        );
-      }
+      raw = await callClaude(systemPrompt, userMessage, { maxTokens: 4096 });
     } catch (err) {
       const msg = err instanceof Error ? err.message : String(err);
-      console.error("[Process] Claude email call failed:", msg);
+      console.error("[Process] Claude combined call failed:", msg);
       return NextResponse.json(
-        { error: `Email summary failed: ${msg}` },
+        { error: `Meeting processing failed: ${msg}` },
         { status: 500 }
       );
     }
 
+    let parsed: { email_draft?: unknown; actions?: unknown[] };
     try {
-      const actionsResponse = await callClaude(actionsPrompt, userMessage);
-      let parsed: { actions?: unknown[] };
-      try {
-        parsed = parseJsonOrThrow(actionsResponse) as { actions?: unknown[] };
-      } catch {
-        return NextResponse.json(
-          { error: "Claude returned malformed JSON for action extraction" },
-          { status: 500 }
-        );
-      }
-      actions = Array.isArray(parsed?.actions) ? parsed.actions : [];
-    } catch (err) {
-      const msg = err instanceof Error ? err.message : String(err);
-      console.error("[Process] Claude actions call failed:", msg);
+      parsed = parseJsonOrThrow(raw) as { email_draft?: unknown; actions?: unknown[] };
+    } catch {
       return NextResponse.json(
-        { error: `Action extraction failed: ${msg}` },
+        { error: "Claude returned malformed JSON (email + actions)" },
         { status: 500 }
       );
     }
+
+    const emailDraft = parsed?.email_draft ?? null;
+    const actions = Array.isArray(parsed?.actions) ? parsed.actions : [];
 
     return NextResponse.json({
       email_draft: emailDraft,

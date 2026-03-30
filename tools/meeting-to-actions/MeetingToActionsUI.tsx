@@ -408,7 +408,10 @@ export function MeetingToActionsUI(props: Props) {
         </section>
 
         <section className={sectionCls + (!processComplete ? disabledCls : "")}>
-          <h3 className="mb-5 text-lg font-semibold text-slate-800">Review & Edit Email Draft</h3>
+          <h3 className="mb-5 text-lg font-semibold text-slate-800">Review & edit client email (sent to Slack)</h3>
+          <p className="mb-4 text-sm text-slate-600">
+            The summary below is posted to your Slack channel when you use <strong>Notify Team</strong>. Gmail draft is optional.
+          </p>
           {emailDraft !== null && (
             <div>
               <div className="mb-4">
@@ -420,8 +423,8 @@ export function MeetingToActionsUI(props: Props) {
                 <textarea value={emailBody} onChange={(e) => setEmailBody(e.target.value)} rows={8} className={`${inputCls} resize-none`} />
               </div>
               <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap">
-                <button onClick={onCreateDraft} disabled={draftLoading} className={btnPrimary}>
-                  {draftLoading ? "Creating…" : "Create Gmail Draft"}
+                <button onClick={onCreateDraft} disabled={draftLoading} className="rounded-xl border-2 border-slate-200 bg-white px-4 py-2.5 text-sm font-semibold text-slate-700 transition-colors hover:border-teal-200 hover:bg-slate-50 disabled:opacity-50">
+                  {draftLoading ? "Creating…" : "Optional: Create Gmail draft"}
                 </button>
                 {gmailLink && <a href={gmailLink} target="_blank" rel="noopener noreferrer" className="rounded-xl border-2 border-teal-200 px-4 py-2.5 text-sm font-semibold text-teal-600 transition-colors hover:border-teal-300 hover:bg-teal-50">Open in Gmail</a>}
               </div>
@@ -432,10 +435,12 @@ export function MeetingToActionsUI(props: Props) {
         </section>
 
         <section className={sectionCls + (!slackActive ? disabledCls : "")}>
-          <h3 className="mb-4 text-lg font-semibold text-slate-800">Notify Team</h3>
-          <p className="mb-5 text-sm text-slate-600">Complete Asana and Gmail steps above to enable.</p>
+          <h3 className="mb-4 text-lg font-semibold text-slate-800">Slack</h3>
+          <p className="mb-5 text-sm text-slate-600">
+            Posts the client email above as a Slack message. If you already pushed tasks to Asana, their links are included automatically.
+          </p>
           <button onClick={onNotifySlack} disabled={!slackActive || slackLoading} className={btnSlack}>
-            {slackLoading ? "Sending…" : "Send Slack Notification"}
+            {slackLoading ? "Sending…" : "Send email to Slack"}
           </button>
           {slackSuccess && <p className="mt-3 rounded-xl bg-emerald-50 px-4 py-2.5 text-sm font-medium text-emerald-700">Slack notification sent.</p>}
           {slackError && <p className="mt-3 rounded-xl bg-red-50 px-4 py-2.5 text-sm font-medium text-red-700">{slackError}</p>}
