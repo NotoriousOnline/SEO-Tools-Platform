@@ -4,5 +4,4 @@ export const config = {
   description:
     "Cannabis education and editorial workflow for Weed.com: dedicated WordPress site list and API routes so you can extend this product without affecting generic Content Production.",
   icon: "document/pencil",
-  requiresPassword: false,
 };
