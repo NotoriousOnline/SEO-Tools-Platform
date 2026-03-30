@@ -4,6 +4,12 @@ import type { MeetingPayload } from "@/lib/meetingStore";
 export const maxDuration = 30; // seconds — requires Vercel Pro or above
 export const dynamic = "force-dynamic"; // disable caching on this route
 
+/** Fathom can be slow when include_summary + include_transcript + many meetings. Default 25s (under maxDuration). */
+const FATHOM_FETCH_TIMEOUT_MS = Math.min(
+  Math.max(1000, parseInt(process.env.FATHOM_FETCH_TIMEOUT_MS ?? "25000", 10)),
+  29000
+);
+
 type FathomTranscriptItem = { speaker?: { display_name?: string }; text?: string; timestamp?: string };
 type FathomMeeting = {
   title?: string;
@@ -63,7 +69,7 @@ export async function GET(request: Request) {
     if (createdAfter) url.searchParams.set("created_after", createdAfter);
 
     const controller = new AbortController();
-    const timeout = setTimeout(() => controller.abort(), 8000);
+    const timeout = setTimeout(() => controller.abort(), FATHOM_FETCH_TIMEOUT_MS);
 
     let response: Response;
     try {
@@ -75,8 +81,12 @@ export async function GET(request: Request) {
     } catch (err: unknown) {
       clearTimeout(timeout);
       if (err instanceof Error && err.name === "AbortError") {
+        const sec = Math.round(FATHOM_FETCH_TIMEOUT_MS / 1000);
         return NextResponse.json(
-          { error: "Fathom API timed out after 8 seconds" },
+          {
+            error: `Fathom API timed out after ${sec} seconds`,
+            hint: "Fathom is often slow with summaries + transcripts; increase FATHOM_FETCH_TIMEOUT_MS (max ~29s) or lower the limit query param.",
+          },
           { status: 504 }
         );
       }

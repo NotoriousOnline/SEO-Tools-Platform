@@ -315,18 +315,28 @@ export default function MeetingToActionsTool() {
   };
 
   const handleNotifySlack = async () => {
-    if (!meeting || !taskResults || !gmailLink) return;
+    if (!meeting) return;
+    if (!emailSubject.trim() && !emailBody.trim()) return;
     setSlackLoading(true);
     setSlackSuccess(false);
     setSlackError(null);
     try {
-      const tasks = taskResults
-        .map((r, i) => (r.success ? { task_title: r.task_title, owner: actions[i]?.owner ?? "—", task_url: r.task_url } : null))
-        .filter((t) => t !== null);
+      const tasks =
+        taskResults?.flatMap((r, i) =>
+          r.success ? [{ task_title: r.task_title, owner: actions[i]?.owner ?? "—", task_url: r.task_url }] : []
+        ) ?? [];
       const res = await fetch("/api/meeting-to-actions/notify-slack", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ meeting_title: meeting.meeting_title, date: meeting.date, tasks, gmail_link: gmailLink, project_url: projectUrl ?? undefined }),
+        body: JSON.stringify({
+          meeting_title: meeting.meeting_title,
+          date: meeting.date,
+          tasks,
+          email_subject: emailSubject,
+          email_body: emailBody,
+          gmail_link: gmailLink ?? undefined,
+          project_url: projectUrl ?? undefined,
+        }),
       });
       const data = (await res.json()) as { success?: boolean; error?: string };
       if (data.success) setSlackSuccess(true);
@@ -347,9 +357,8 @@ export default function MeetingToActionsTool() {
   };
 
   const processComplete = actions.length > 0 || emailDraft !== null;
-  const asanaComplete = taskResults !== null && taskResults.every((r) => r.success);
-  const draftComplete = gmailLink !== null;
-  const slackActive = asanaComplete && draftComplete;
+  const hasEmailForSlack = emailSubject.trim().length > 0 || emailBody.trim().length > 0;
+  const slackActive = meeting !== null && hasEmailForSlack;
 
   const allPastMeetings = [
     ...meetings,
