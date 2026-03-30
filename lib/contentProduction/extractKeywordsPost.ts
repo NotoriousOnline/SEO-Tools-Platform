@@ -3,9 +3,6 @@ import Anthropic from "@anthropic-ai/sdk";
 import { fetchMatchingTermsByVolume } from "@/lib/ahrefsClient";
 import { WP_TOOL_SCOPE, type WPToolScope } from "@/lib/wpSites";
 
-export const extractKeywordsDynamic = "force-dynamic";
-export const extractKeywordsRuntime = "nodejs";
-
 function extractJsonObject(text: string): unknown {
   let cleaned = text.trim();
   const fenceMatch = cleaned.match(/```(?:json)?\s*([\s\S]*?)```/i);
