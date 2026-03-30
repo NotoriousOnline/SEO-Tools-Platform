@@ -1,5 +1,4 @@
 import { NextResponse } from "next/server";
-import sharp from "sharp";
 import { getSiteById, type WPToolScope } from "@/lib/wpSites";
 import { stripLeadingPostTitleH1 } from "@/lib/postHtml";
 import {
@@ -9,42 +8,41 @@ import {
   updateMediaDetails,
   updatePostYoastMeta,
 } from "@/lib/wordpressClient";
+import { compressImageForUpload } from "@/lib/contentProduction/wpImageCompress";
 import { errorMessage, serverLog } from "@/lib/serverLog";
 
-const MAX_IMAGE_DIMENSION = 1200;
-const JPEG_QUALITY = 85;
+/** Final publish payload is small (HTML + image URLs). Kept generous for long posts. */
+const MAX_PUBLISH_BODY_BYTES = 4_200_000;
 
-async function compressImageForUpload(
-  buffer: Buffer,
-  mimeType: string
-): Promise<{ buffer: Buffer; mimeType: string; ext: string }> {
-  try {
-    const pipeline = sharp(buffer)
-      .resize(MAX_IMAGE_DIMENSION, MAX_IMAGE_DIMENSION, { fit: "inside", withoutEnlargement: true });
-
-    const out = await pipeline
-      .jpeg({ quality: JPEG_QUALITY })
-      .toBuffer();
-    return { buffer: out, mimeType: "image/jpeg", ext: "jpg" };
-  } catch {
-    return {
-      buffer,
-      mimeType: mimeType ?? "image/png",
-      ext: mimeType?.includes("jpeg") || mimeType?.includes("jpg") ? "jpg" : "png",
-    };
-  }
-}
-
-type ImageItem = {
+type PreUploadedImageItem = {
   type: "featured" | "in-content";
   index: number;
-  base64: string;
-  mimeType: string;
-  prompt?: string;
+  mediaId: number;
+  url: string;
   altText?: string;
   fileSlug?: string;
   h2Index?: number;
 };
+
+type RawBase64ImageItem = {
+  type: "featured" | "in-content";
+  index: number;
+  base64: string;
+  mimeType?: string;
+  altText?: string;
+  fileSlug?: string;
+  h2Index?: number;
+};
+
+type ImageItem = PreUploadedImageItem | RawBase64ImageItem;
+
+function isPreUploaded(img: ImageItem): img is PreUploadedImageItem {
+  return (
+    typeof (img as PreUploadedImageItem).mediaId === "number" &&
+    typeof (img as PreUploadedImageItem).url === "string" &&
+    !("base64" in img && typeof (img as RawBase64ImageItem).base64 === "string" && (img as RawBase64ImageItem).base64.length > 0)
+  );
+}
 
 function findH2EndPositionByIndex(html: string, h2Index: number): number | null {
   const regex = /<h2[^>]*>[\s\S]*?<\/h2>/gi;
@@ -128,7 +126,30 @@ function appendReferenceDisclaimer(html: string, referenceUrlRaw: unknown): stri
 
 export async function postPublish(request: Request, toolScope: WPToolScope) {
   try {
-    const body = await request.json();
+    const raw = await request.text();
+    if (raw.length > MAX_PUBLISH_BODY_BYTES) {
+      return NextResponse.json(
+        {
+          error: `Publish request is too large (~${Math.round(raw.length / 1e6)}MB). Try shortening the article HTML.`,
+        },
+        { status: 413 }
+      );
+    }
+
+    let body: {
+      siteId?: string;
+      title?: string;
+      content?: string;
+      images?: unknown;
+      referenceUrl?: unknown;
+      keywords?: unknown;
+    };
+    try {
+      body = JSON.parse(raw) as typeof body;
+    } catch {
+      return NextResponse.json({ error: "Invalid JSON body" }, { status: 400 });
+    }
+
     const { siteId, title, content, images, referenceUrl, keywords } = body;
 
     if (!siteId || !title || !content || !Array.isArray(images)) {
@@ -151,38 +172,54 @@ export async function postPublish(request: Request, toolScope: WPToolScope) {
 
     let featuredMediaId: number | undefined;
 
-    if (featuredImg?.base64) {
-      const buf = Buffer.from(featuredImg.base64, "base64");
-      const { buffer, mimeType, ext } = await compressImageForUpload(buf, featuredImg.mimeType ?? "image/png");
-      const slug = (featuredImg.fileSlug ?? "featured").replace(/[^a-z0-9-]/gi, "-").slice(0, 60);
-      const { id } = await uploadMedia(site, buffer, `${slug}.${ext}`, mimeType);
-      featuredMediaId = id;
-      await updateMediaDetails(site, id, {
-        alt_text: featuredImg.altText ?? title.slice(0, 125),
-        title: slug.replace(/-/g, " ").replace(/\b\w/g, (c) => c.toUpperCase()),
-      });
+    if (featuredImg) {
+      if (isPreUploaded(featuredImg)) {
+        featuredMediaId = featuredImg.mediaId;
+      } else if ("base64" in featuredImg && featuredImg.base64) {
+        const buf = Buffer.from(featuredImg.base64, "base64");
+        const { buffer, mimeType, ext } = await compressImageForUpload(buf, featuredImg.mimeType ?? "image/png");
+        const slug = (featuredImg.fileSlug ?? "featured").replace(/[^a-z0-9-]/gi, "-").slice(0, 60);
+        const { id } = await uploadMedia(site, buffer, `${slug}.${ext}`, mimeType);
+        featuredMediaId = id;
+        await updateMediaDetails(site, id, {
+          alt_text: featuredImg.altText ?? title.slice(0, 125),
+          title: slug.replace(/-/g, " ").replace(/\b\w/g, (c) => c.toUpperCase()),
+        });
+      }
     }
 
     const placements: InContentPlacement[] = [];
     let order = 0;
     for (const img of inContentImgs) {
-      if (!img.base64) continue;
-      const buf = Buffer.from(img.base64, "base64");
-      const { buffer, mimeType, ext } = await compressImageForUpload(buf, img.mimeType ?? "image/png");
-      const slug =
-        (img.fileSlug ?? `in-content-${img.index}`).replace(/[^a-z0-9-]/gi, "-").slice(0, 60) || `in-content-${img.index}`;
-      const { id, url } = await uploadMedia(site, buffer, `${slug}.${ext}`, mimeType);
-      await updateMediaDetails(site, id, {
-        alt_text: img.altText ?? `Illustration for section ${img.index}`,
-        title: slug.replace(/-/g, " ").replace(/\b\w/g, (c) => c.toUpperCase()),
-      });
-      const h2Index = typeof img.h2Index === "number" ? img.h2Index : img.index - 1;
-      placements.push({
-        url,
-        alt: img.altText ?? "Article illustration",
-        h2Index: Math.max(0, h2Index),
-        order: order++,
-      });
+      if (isPreUploaded(img)) {
+        const h2Index = typeof img.h2Index === "number" ? img.h2Index : img.index - 1;
+        placements.push({
+          url: img.url,
+          alt: img.altText ?? "Article illustration",
+          h2Index: Math.max(0, h2Index),
+          order: order++,
+        });
+        continue;
+      }
+      if ("base64" in img && img.base64) {
+        const buf = Buffer.from(img.base64, "base64");
+        const { buffer, mimeType, ext } = await compressImageForUpload(buf, img.mimeType ?? "image/png");
+        const slug =
+          (img.fileSlug ?? `in-content-${img.index}`).replace(/[^a-z0-9-]/gi, "-").slice(0, 60) ||
+          `in-content-${img.index}`;
+        const { id, url } = await uploadMedia(site, buffer, `${slug}.${ext}`, mimeType);
+        await updateMediaDetails(site, id, {
+          alt_text: img.altText ?? `Illustration for section ${img.index}`,
+          title: slug.replace(/-/g, " ").replace(/\b\w/g, (c) => c.toUpperCase()),
+        });
+        const h2Index = typeof img.h2Index === "number" ? img.h2Index : img.index - 1;
+        placements.push({
+          url,
+          alt: img.altText ?? "Article illustration",
+          h2Index: Math.max(0, h2Index),
+          order: order++,
+        });
+      }
     }
 
     const bodyHtml = stripLeadingPostTitleH1(typeof content === "string" ? content : "");
@@ -227,3 +264,8 @@ export async function postPublish(request: Request, toolScope: WPToolScope) {
     );
   }
 }
+</think>
+
+
+<｜tool▁calls▁begin｜><｜tool▁call▁begin｜>
+Read

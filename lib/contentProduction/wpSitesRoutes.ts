@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { describeFetchError, explainSupabaseReachabilityError } from "@/lib/serverFetch";
 import { errorMessage, serverLog } from "@/lib/serverLog";
-import { wpRestHeaders } from "@/lib/wordpressClient";
+import { wpRestHeaders, wpRestUrl } from "@/lib/wordpressClient";
 import { createSite, getSites, type CreateSiteData, type WPToolScope } from "@/lib/wpSites";
 
 const MASKED_PASSWORD = "••••••••";
@@ -17,7 +17,7 @@ async function testWordPressConnection(
 ): Promise<{ ok: boolean; detail?: string }> {
   const base = url.replace(/\/$/, "");
   try {
-    const res = await fetch(`${base}/wp-json/wp/v2/users/me`, {
+    const res = await fetch(wpRestUrl(base, "wp/v2/users/me"), {
       headers: wpRestHeaders({ url, username, app_password }),
     });
     if (!res.ok) {

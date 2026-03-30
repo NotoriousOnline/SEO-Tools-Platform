@@ -73,6 +73,7 @@ export function ContentProductionTool({
   const [approvedContent, setApprovedContent] = useState<string | null>(null);
   const [publishing, setPublishing] = useState(false);
   const [publishStep, setPublishStep] = useState<string | null>(null);
+  const [publishError, setPublishError] = useState<string | null>(null);
   const [publishResult, setPublishResult] = useState<{
     postId: number;
     postUrl: string;
@@ -492,60 +493,152 @@ export function ContentProductionTool({
   const handlePublish = useCallback(async () => {
     if (!selectedSite || !title.trim() || !approvedContent || !generatedImages) return;
     setPublishing(true);
-    setPublishStep("Uploading featured image...");
-    const t2 = setTimeout(() => setPublishStep("Uploading in-content images..."), 400);
-    const t3 = setTimeout(() => setPublishStep("Creating draft post..."), 800);
+    setPublishError(null);
+
+    const wafHint =
+      " If this works locally but not on Vercel, the site’s firewall (e.g. Cloudflare) may be blocking /wp-json from Vercel. Your team can allowlist the app — see WORDPRESS_WAF_* env vars in .env.example.";
+
+    const parseApiError = (res: Response, text: string): string => {
+      let data: Record<string, unknown> = {};
+      try {
+        if (text) data = JSON.parse(text) as Record<string, unknown>;
+      } catch {
+        return res.status === 413
+          ? "Request too large for the server (Vercel payload limit). Try a smaller image or fewer images."
+          : (text || "").slice(0, 500) || `Server returned HTTP ${res.status}`;
+      }
+      let msg = typeof data.error === "string" ? data.error : `Request failed (HTTP ${res.status})`;
+      if (res.status === 413) {
+        msg =
+          typeof data.error === "string"
+            ? data.error
+            : "Payload too large for Vercel. Try a smaller image or regenerate with lower resolution.";
+      }
+      if (res.status === 403 || /403/.test(msg) || /cloudflare|blocked|forbidden/i.test(msg)) {
+        msg += wafHint;
+      }
+      return msg;
+    };
+
     try {
       const included = generatedImages.filter((i) => i.included);
-      const imagesPayload = included.map(
-        ({ type, index, base64, mimeType, altText, fileSlug, h2Index }) => ({
-          type,
-          index,
-          base64,
-          mimeType,
-          altText,
-          fileSlug,
-          h2Index,
-        })
-      );
+      const titleTrim = title.trim();
+
+      const uploadedRefs: Array<{
+        type: "featured" | "in-content";
+        index: number;
+        mediaId: number;
+        url: string;
+        altText?: string;
+        fileSlug?: string;
+        h2Index?: number;
+      }> = [];
+
+      for (let i = 0; i < included.length; i++) {
+        const img = included[i];
+        setPublishStep(`Uploading image ${i + 1} of ${included.length} to WordPress…`);
+        const upRes = await fetch(`${api}/publish/upload-image`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            siteId: selectedSite.id,
+            type: img.type,
+            index: img.index,
+            base64: img.base64,
+            mimeType: img.mimeType,
+            altText: img.altText,
+            fileSlug: img.fileSlug,
+            title: titleTrim,
+          }),
+        });
+        const upText = await upRes.text();
+        if (!upRes.ok) {
+          setPublishError(parseApiError(upRes, upText));
+          setPublishResult(null);
+          return;
+        }
+        let upData: Record<string, unknown> = {};
+        try {
+          if (upText) upData = JSON.parse(upText) as Record<string, unknown>;
+        } catch {
+          setPublishError("Invalid response while uploading an image");
+          setPublishResult(null);
+          return;
+        }
+        const id = upData.id as number;
+        const url = upData.url as string;
+        if (typeof id !== "number" || typeof url !== "string") {
+          setPublishError("WordPress did not return media id/url for an image");
+          setPublishResult(null);
+          return;
+        }
+        uploadedRefs.push({
+          type: img.type,
+          index: img.index,
+          mediaId: id,
+          url,
+          altText: img.altText,
+          fileSlug: img.fileSlug,
+          h2Index: img.h2Index,
+        });
+      }
+
+      setPublishStep("Creating draft post…");
       const res = await fetch(`${api}/publish`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           siteId: selectedSite.id,
-          title: title.trim(),
+          title: titleTrim,
           content: approvedContent,
-          images: imagesPayload,
+          images: uploadedRefs,
           referenceUrl: referenceUrl.trim() || undefined,
           keywords,
         }),
       });
-      const data = await res.json();
-      clearTimeout(t2);
-      clearTimeout(t3);
-      if (!res.ok) {
-        throw new Error(data.error ?? "Publish failed");
+      const text = await res.text();
+
+      let data: Record<string, unknown> = {};
+      try {
+        if (text) data = JSON.parse(text) as Record<string, unknown>;
+      } catch {
+        setPublishError(
+          res.status === 413
+            ? "Draft step payload too large (unusual). Try shortening the article HTML."
+            : (text || "").slice(0, 500) || `Server returned HTTP ${res.status}`
+        );
+        setPublishResult(null);
+        return;
       }
+
+      if (!res.ok) {
+        let msg = typeof data.error === "string" ? data.error : `Publish failed (HTTP ${res.status})`;
+        if (res.status === 403 || /403/.test(msg) || /cloudflare|blocked|forbidden/i.test(msg)) {
+          msg += wafHint;
+        }
+        setPublishError(msg);
+        setPublishResult(null);
+        return;
+      }
+
+      setPublishError(null);
       setPublishResult({
-        postId: data.postId,
-        postUrl: data.postUrl,
-        editUrl: data.editUrl,
-        site: data.site ?? { name: selectedSite.name, url: selectedSite.url },
-        yoast: data.yoast,
+        postId: data.postId as number,
+        postUrl: data.postUrl as string,
+        editUrl: data.editUrl as string,
+        site: (data.site as { name: string; url: string }) ?? { name: selectedSite.name, url: selectedSite.url },
+        yoast: data.yoast as { focusKeyphrase?: string; metaDescriptionSet?: boolean } | undefined,
       });
     } catch (err) {
-      clearTimeout(t2);
-      clearTimeout(t3);
       setPublishStep(null);
       setPublishResult(null);
+      setPublishError(err instanceof Error ? err.message : String(err));
       console.error(err);
     } finally {
-      clearTimeout(t2);
-      clearTimeout(t3);
       setPublishing(false);
       setPublishStep(null);
     }
-  }, [selectedSite, title, approvedContent, generatedImages, referenceUrl, keywords]);
+  }, [selectedSite, title, approvedContent, generatedImages, referenceUrl, keywords, api]);
 
   const handleStartNewPost = useCallback(() => {
     setTitle("");
@@ -560,6 +653,7 @@ export function ContentProductionTool({
     setImagesApproved(false);
     setApprovedContent(null);
     setPublishResult(null);
+    setPublishError(null);
   }, []);
 
   return (
@@ -1172,6 +1266,15 @@ export function ContentProductionTool({
                   </li>
                 </ol>
               )}
+              {publishError ? (
+                <div className="rounded-lg border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-900">
+                  <p className="font-semibold text-rose-800">Could not publish draft</p>
+                  <p className="mt-2 whitespace-pre-wrap break-words font-mono text-xs leading-relaxed">{publishError}</p>
+                  <p className="mt-3 text-xs text-rose-700/90">
+                    Check <strong>Server logs</strong> in the sidebar (if configured), Vercel → Deployment → Functions logs, and WordPress application password / site URL in Site settings.
+                  </p>
+                </div>
+              ) : null}
               <button
                 type="button"
                 onClick={handlePublish}

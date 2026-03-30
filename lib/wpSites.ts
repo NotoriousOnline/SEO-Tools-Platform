@@ -28,12 +28,12 @@ function isMissingToolScopeColumnError(err: unknown): boolean {
 
 function rowToWPSite(row: Record<string, unknown>): WPSite & { id: string; name: string; tone_prompt?: string } {
   return {
-    id: row.id as string,
-    name: row.name as string,
-    url: row.url as string,
-    username: row.username as string,
-    app_password: row.app_password as string,
-    tone_prompt: row.tone_prompt as string | undefined,
+    id: String(row.id ?? "").trim(),
+    name: String(row.name ?? "").trim(),
+    url: String(row.url ?? "").trim().replace(/\/+$/, ""),
+    username: String(row.username ?? "").trim(),
+    app_password: String(row.app_password ?? "").trim(),
+    tone_prompt: row.tone_prompt != null ? String(row.tone_prompt).trim() : undefined,
   };
 }
 
