@@ -40,7 +40,11 @@ function isPreUploaded(img: ImageItem): img is PreUploadedImageItem {
   return (
     typeof (img as PreUploadedImageItem).mediaId === "number" &&
     typeof (img as PreUploadedImageItem).url === "string" &&
-    !("base64" in img && typeof (img as RawBase64ImageItem).base64 === "string" && (img as RawBase64ImageItem).base64.length > 0)
+    !(
+      "base64" in img &&
+      typeof (img as RawBase64ImageItem).base64 === "string" &&
+      (img as RawBase64ImageItem).base64.length > 0
+    )
   );
 }
 
@@ -264,8 +268,3 @@ export async function postPublish(request: Request, toolScope: WPToolScope) {
     );
   }
 }
-</think>
-
-
-<｜tool▁calls▁begin｜><｜tool▁call▁begin｜>
-Read
