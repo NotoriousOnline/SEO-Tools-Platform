@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { generateImage, isImageGenerationOverloadExhausted } from "@/lib/geminiClient";
+import { generateImage, httpStatusForImageGenerationError } from "@/lib/geminiClient";
 import { errorMessage, serverLog } from "@/lib/serverLog";
 
 export async function postGenerateImageSingle(request: Request) {
@@ -20,7 +20,7 @@ export async function postGenerateImageSingle(request: Request) {
     const msg = errorMessage(err);
     console.error("[generate-images/single] Error:", msg);
     void serverLog({ level: "error", source: "content-production/generate-image-single", message: msg });
-    const status = isImageGenerationOverloadExhausted(err) ? 503 : 500;
+    const status = httpStatusForImageGenerationError(err);
     return NextResponse.json({ error: msg || "Failed to generate image" }, { status });
   }
 }

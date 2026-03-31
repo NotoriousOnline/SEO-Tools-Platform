@@ -1,9 +1,43 @@
-import { ApiError, GoogleGenAI } from "@google/genai";
+import { ApiError, GoogleGenAI, PersonGeneration, SafetyFilterLevel } from "@google/genai";
 import { errorMessage } from "@/lib/serverLog";
 
 /** Thrown when retryable Imagen errors persist after all attempts (client should show 503-style guidance). */
 export const IMAGE_GENERATION_OVERLOAD_USER_MESSAGE =
   "Image generation is temporarily overloaded. Wait a minute and try again, or generate fewer images at once.";
+
+/** HTTP 200 but no image bytes after retries (transient or prompt/model issue). */
+export const IMAGE_GENERATION_EMPTY_USER_MESSAGE =
+  "Image generation did not return image data. Wait a moment and try again, or simplify the image prompt.";
+
+/** Internal marker for empty-body responses we should retry. */
+const IMAGEN_NO_BYTES_TRANSIENT = "__IMAGEN_NO_BYTES_TRANSIENT__";
+
+type GeneratedImageEntry = {
+  image?: { imageBytes?: string; mimeType?: string };
+  raiFilteredReason?: string;
+};
+
+function pickImageFromResult(result: { generatedImages?: GeneratedImageEntry[] }): {
+  base64: string;
+  mimeType: string;
+} | null {
+  const imgs = result.generatedImages ?? [];
+  const raiReasons: string[] = [];
+  for (const gi of imgs) {
+    const bytes = gi.image?.imageBytes;
+    if (typeof bytes === "string" && bytes.length > 0) {
+      return {
+        base64: bytes,
+        mimeType: gi.image?.mimeType ?? "image/png",
+      };
+    }
+    if (gi.raiFilteredReason) raiReasons.push(gi.raiFilteredReason);
+  }
+  if (raiReasons.length > 0) {
+    throw new Error(`Imagen content policy: ${raiReasons[0]}`);
+  }
+  return null;
+}
 
 function geminiHttpStatus(err: unknown): number | undefined {
   if (typeof err === "object" && err !== null && "status" in err) {
@@ -44,6 +78,15 @@ export function isImageGenerationOverloadExhausted(err: unknown): boolean {
   return lower.includes("overloaded") || lower.includes("resource_exhausted");
 }
 
+/** Map handler errors to HTTP status (overload 503, safety 422, empty 503, else 500). */
+export function httpStatusForImageGenerationError(err: unknown): number {
+  const msg = errorMessage(err);
+  if (msg.startsWith("Imagen content policy:")) return 422;
+  if (msg === IMAGE_GENERATION_EMPTY_USER_MESSAGE) return 503;
+  if (isImageGenerationOverloadExhausted(err)) return 503;
+  return 500;
+}
+
 let lastCallTime = 0;
 /** Minimum gap between Imagen API calls to reduce burst overload. */
 const DELAY_MS = 3000;
@@ -72,6 +115,8 @@ function backoffMs(attemptIndex: number): number {
 }
 
 function isRetryableImagenError(err: unknown): boolean {
+  const msg = err instanceof Error ? err.message : String(err);
+  if (msg === IMAGEN_NO_BYTES_TRANSIENT) return true;
   const byStatus = geminiHttpStatus(err);
   if (byStatus !== undefined && (byStatus === 429 || byStatus === 500 || byStatus === 502 || byStatus === 503 || byStatus === 529)) {
     return true;
@@ -81,7 +126,6 @@ function isRetryableImagenError(err: unknown): boolean {
     if (s === 429 || s === 500 || s === 502 || s === 503 || s === 529) return true;
   }
   if (parseOverloadedFromApiErrorMessage(err)) return true;
-  const msg = err instanceof Error ? err.message : String(err);
   const lower = msg.toLowerCase();
   return (
     lower.includes("overloaded") ||
@@ -142,6 +186,9 @@ export async function generateImage(
   }
 
   if (lastErr instanceof Error) {
+    if (lastErr.message === IMAGEN_NO_BYTES_TRANSIENT) {
+      throw new Error(IMAGE_GENERATION_EMPTY_USER_MESSAGE, { cause: lastErr });
+    }
     if (isRetryableImagenError(lastErr)) {
       throw new Error(IMAGE_GENERATION_OVERLOAD_USER_MESSAGE, { cause: lastErr });
     }

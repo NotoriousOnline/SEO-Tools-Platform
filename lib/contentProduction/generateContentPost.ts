@@ -49,12 +49,12 @@ function weedLayer1BiblePrompt(toolScope: WPToolScope): string {
   return `
 
 WEED.COM CONTENT GENERATION PROMPT - LAYER 1 (AI DRAFT)
-Version: Bible v5 | March 2026
+Version: Bible v6 | April 2026
 This is Layer 1 only and must be edited by a human expert before publish.
 
 SYSTEM ROLE
 You are a professional cannabis content writer producing Layer 1 first drafts for Weed.com Learn.
-Follow Bible v5 strictly. Drafts are structured, evidence-referenced, and brief-compliant.
+Follow Bible v6 strictly. Drafts are structured, evidence-referenced, and brief-compliant.
 
 MANDATORY RULES
 - Voice: knowledgeable, warm, direct, never condescending, never hype/fear, honest on evidence limits.
@@ -84,14 +84,16 @@ Placement (same as before):
 
 Each inner paragraph must contain specific 2-sentence editorial direction for the clinician (not a summary of the AI draft above).
 
-CITATIONS (strict)
-- Include at most 2 citations in the whole article. Choose only the most relevant, highest-value mechanistic or clinical claims to support.
-- Each citation must include a clickable link: wrap anchor text in <a href="..." target="_blank" rel="noopener noreferrer">...</a>.
-- href must point only to PubMed: either a specific article URL if you are confident it is correct, or a PubMed search URL built as https://pubmed.ncbi.nlm.nih.gov/?term= plus a tight URL-encoded query (author name + topic + year when helpful).
-- Never invent PMIDs or fake article URLs. If unsure, use the search URL form only.
-- Plain-language sentence should explain study type (animal, observational, RCT, review) before or beside the link.
-- Do not add bare [CITE: ...] placeholders without a live PubMed link for these two slots. Optional short editor note in parentheses after the link is fine.
-- No other external links anywhere in the article (internal links from the candidate list only, plus these max 2 PubMed links).
+CITATIONS (strict — one paper, one PMID link)
+- Include at most 2 citations in the whole article. Use them only for the strongest mechanistic or clinical claims.
+- A real citation is a specific peer-reviewed paper (known authors, journal, year), not a keyword search. PubMed search URLs are forbidden: any href containing pubmed.ncbi.nlm.nih.gov/?term= (or other query-string search) is unacceptable — it is not stable, not verifiable, and useless to readers and fact-checkers.
+- Required link pattern only: a single PubMed record page using the numeric PMID in the path — https://pubmed.ncbi.nlm.nih.gov/31860793/ style (digits only; no ?term=, no /pubmed/ search, no invented paths).
+- In the same sentence or the immediately following sentence, name the source in readable bibliographic form: lead author et al., journal, year (e.g. Blount et al., N Engl J Med, 2020). You may add a DOI in plain text beside it when you know it; the clickable href must still be the PubMed PMID URL above.
+- Anchor text must be specific (e.g. "Blount et al. (NEJM, 2020)" or the study's identifiable short label), never vague ("a study," "research shows," "read more").
+- Never invent PMIDs, journals, volumes, or pages. If you cannot confirm an exact PMID for the paper you mean, do not substitute a search URL: omit that citation and use a [DR. AUTHOR VOICE] instruction asking the human editor to insert a verified PMID link and full reference.
+- Keep a plain-language clause on study design where it helps (RCT, cohort, case series, review, etc.).
+- No bare [CITE: ...] placeholders without a live PMID article URL. Optional brief editor note in parentheses after the link is fine.
+- No other external links or domains in the article (internal links from the candidate list only, plus at most these 2 PubMed PMID links).
 
 INTERNAL LINKING (strict)
 - Use only the provided internal links/candidates.
@@ -209,7 +211,7 @@ Keywords: ${keywords.join(", ")}${briefExtra ? `\n\n${briefExtra}` : ""}
 Internal link candidates (pick 2-3 that best match nearby content; each URL at most once):
 ${linksText}
 
-Write the full HTML blog post. Include the FAQ block as specified (1 or 2 FAQ subsections by topic fit, bullets in answers where it helps). Remember: no em dash character anywhere in the HTML. Do not output an <h1>; the post title is set only in WordPress. Start with <p> or <h2>.${toolScope === WP_TOOL_SCOPE.weedComContentProduction ? " Double-check every internal link: anchor text must be specific (never rely on 'this guide' / 'this breakdown' style phrasing). Product names must follow a clear contextual lead-in. Do not force the primary keyword into the opening of the first paragraph or into headings. Add at most 2 PubMed-linked citations for the strongest claims. Wrap every Dr. Alex [DR. AUTHOR VOICE] block in the yellow cream aside quote styling from the Bible rules." : ""}`;
+Write the full HTML blog post. Include the FAQ block as specified (1 or 2 FAQ subsections by topic fit, bullets in answers where it helps). Remember: no em dash character anywhere in the HTML. Do not output an <h1>; the post title is set only in WordPress. Start with <p> or <h2>.${toolScope === WP_TOOL_SCOPE.weedComContentProduction ? " Double-check every internal link: anchor text must be specific (never rely on 'this guide' / 'this breakdown' style phrasing). Product names must follow a clear contextual lead-in. Do not force the primary keyword into the opening of the first paragraph or into headings. At most 2 citations; each must use a verified PMID article URL only (https://pubmed.ncbi.nlm.nih.gov/<digits>/) — never PubMed ?term= search links — with author/journal/year in adjacent text. Wrap every Dr. Alex [DR. AUTHOR VOICE] block in the yellow cream aside quote styling from the Bible rules." : ""}`;
 
     const raw = await callClaude(systemPrompt, userMessage, {
       maxTokens: Math.max(4096, Math.ceil(wordCount * 2.5)),
