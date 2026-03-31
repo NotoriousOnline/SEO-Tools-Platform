@@ -8,6 +8,8 @@ export default function WeedComContentProductionToolPage() {
     <ContentProductionTool
       config={config}
       apiPrefix="/api/weed-com-content-production"
+      showReferenceUrl={false}
+      manualBriefFields
     />
   );
 }

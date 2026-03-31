@@ -1,12 +1,13 @@
 import { NextResponse } from "next/server";
-import { getSiteById, type WPToolScope } from "@/lib/wpSites";
+import { getSiteById, WP_TOOL_SCOPE, type WPToolScope } from "@/lib/wpSites";
 import { stripLeadingPostTitleH1 } from "@/lib/postHtml";
 import {
   createPost,
+  getCategoryIdByName,
   setPostFeaturedMedia,
   uploadMedia,
   updateMediaDetails,
-  updatePostYoastMeta,
+  updatePostRankMathMeta,
 } from "@/lib/wordpressClient";
 import { compressImageForUpload } from "@/lib/contentProduction/wpImageCompress";
 import { errorMessage, serverLog } from "@/lib/serverLog";
@@ -120,6 +121,25 @@ function pickFocusKeyphrase(keywords: unknown, title: string): string {
   return title.slice(0, 80).trim();
 }
 
+function escapeRegex(s: string): string {
+  return s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
+
+function containsKeyword(text: string, kw: string): boolean {
+  if (!kw.trim()) return false;
+  const re = new RegExp(`\\b${escapeRegex(kw.trim())}\\b`, "i");
+  return re.test(text);
+}
+
+function ensureFeaturedAltIncludesKeyword(alt: string, kw: string): string {
+  const safeAlt = alt.trim();
+  if (!kw.trim()) return safeAlt;
+  if (containsKeyword(safeAlt, kw)) return safeAlt;
+  if (!safeAlt) return kw.trim().slice(0, 125);
+  const joined = `${safeAlt} - ${kw.trim()}`;
+  return joined.slice(0, 125);
+}
+
 function appendReferenceDisclaimer(html: string, referenceUrlRaw: unknown): string {
   if (typeof referenceUrlRaw !== "string") return html;
   const raw = referenceUrlRaw.trim();
@@ -189,11 +209,16 @@ export async function postPublish(request: Request, toolScope: WPToolScope) {
     let featuredImageUrlForBody: string | undefined;
     let featuredImageAltForBody: string | undefined;
 
+    const focuskw = pickFocusKeyphrase(keywords, title);
+
     if (featuredImg) {
       if (isPreUploaded(featuredImg)) {
         featuredMediaId = featuredImg.mediaId;
         featuredImageUrlForBody = featuredImg.url;
-        featuredImageAltForBody = featuredImg.altText ?? title.slice(0, 125);
+        featuredImageAltForBody = ensureFeaturedAltIncludesKeyword(
+          featuredImg.altText ?? title.slice(0, 125),
+          focuskw
+        );
       } else if ("base64" in featuredImg && featuredImg.base64) {
         const buf = Buffer.from(featuredImg.base64, "base64");
         const { buffer, mimeType, ext } = await compressImageForUpload(buf, featuredImg.mimeType ?? "image/png");
@@ -201,7 +226,10 @@ export async function postPublish(request: Request, toolScope: WPToolScope) {
         const { id, url } = await uploadMedia(site, buffer, `${slug}.${ext}`, mimeType);
         featuredMediaId = id;
         featuredImageUrlForBody = url;
-        featuredImageAltForBody = featuredImg.altText ?? title.slice(0, 125);
+        featuredImageAltForBody = ensureFeaturedAltIncludesKeyword(
+          featuredImg.altText ?? title.slice(0, 125),
+          focuskw
+        );
         await updateMediaDetails(site, id, {
           alt_text: featuredImageAltForBody,
           title: slug.replace(/-/g, " ").replace(/\b\w/g, (c) => c.toUpperCase()),
@@ -244,23 +272,42 @@ export async function postPublish(request: Request, toolScope: WPToolScope) {
     }
 
     const bodyHtml = stripLeadingPostTitleH1(typeof content === "string" ? content : "");
+    const prependFeaturedFigureInBody = toolScope !== WP_TOOL_SCOPE.weedComContentProduction;
     const withFeaturedAtStart =
-      featuredImageUrlForBody != null && featuredImageUrlForBody.trim() !== ""
+      prependFeaturedFigureInBody &&
+      featuredImageUrlForBody != null &&
+      featuredImageUrlForBody.trim() !== ""
         ? prependFeaturedImageToBody(bodyHtml, featuredImageUrlForBody.trim(), featuredImageAltForBody ?? title.slice(0, 125))
         : bodyHtml;
     const withImages = injectInContentImages(withFeaturedAtStart, placements);
     const finalContent = appendReferenceDisclaimer(withImages, referenceUrl);
-    const { id: postId, link, editUrl, status } = await createPost(site, title, finalContent);
+    const taxonomyOpts: { categories?: number[]; tags?: number[] } = {};
+    if (toolScope === WP_TOOL_SCOPE.weedComContentProduction) {
+      const learnCategoryId = await getCategoryIdByName(site, "learn");
+      if (learnCategoryId != null && learnCategoryId > 0) {
+        taxonomyOpts.categories = [learnCategoryId];
+      } else {
+        console.warn('[publish] Could not resolve category "learn"; publishing without category assignment.');
+      }
+      taxonomyOpts.tags = [4337];
+    }
+    const { id: postId, link, editUrl, status } = await createPost(
+      site,
+      title,
+      finalContent,
+      undefined,
+      taxonomyOpts
+    );
     if (featuredMediaId != null && featuredMediaId > 0) {
       await setPostFeaturedMedia(site, postId, featuredMediaId);
     }
 
     const metadesc = buildMetaDescription(finalContent);
-    const focuskw = pickFocusKeyphrase(keywords, title);
-    const yoastOk = await updatePostYoastMeta(site, postId, {
+    const seoTitle = title.slice(0, 200);
+    const rankMathOk = await updatePostRankMathMeta(site, postId, {
       metadesc,
       focuskw,
-      seoTitle: title.slice(0, 200),
+      seoTitle,
     });
 
     if (status !== "draft") {
@@ -273,7 +320,7 @@ export async function postPublish(request: Request, toolScope: WPToolScope) {
       editUrl,
       status,
       site: { name: site.name, url: site.url },
-      yoast: { metaDescriptionSet: yoastOk, focusKeyphrase: focuskw },
+      rankMath: { metaDescriptionSet: rankMathOk, focusKeyphrase: focuskw },
     });
   } catch (err) {
     const msg = errorMessage(err);

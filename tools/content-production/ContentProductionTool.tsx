@@ -2,6 +2,11 @@
 
 import { useState, useEffect, useRef, useCallback } from "react";
 import type { ToolConfig } from "@/lib/toolRegistry";
+import {
+  buildEditorialBriefFromRow,
+  targetKeywordToKeywords,
+  type ArticleSheetRow,
+} from "@/lib/articleSheetCalendar";
 
 type ImageItem = {
   type: "featured" | "in-content";
@@ -30,10 +35,19 @@ type Site = {
 export function ContentProductionTool({
   config: _toolConfig,
   apiPrefix = "/api/content-production",
+  showReferenceUrl = true,
+  articleSheetFromGoogle = false,
+  manualBriefFields = false,
 }: {
   config: ToolConfig;
   /** Separate API namespace per product (e.g. Weed.com uses `/api/weed-com-content-production`). */
   apiPrefix?: string;
+  /** When false, hide reference URL field and never append it on publish (e.g. Weed.com calendar workflow). */
+  showReferenceUrl?: boolean;
+  /** Weed.com: load article rows from Google Sheet API (`GET .../article-sheet`). */
+  articleSheetFromGoogle?: boolean;
+  /** Weed.com: manual Title, target keyword(s), product type for links, content angle (sheet paused). */
+  manualBriefFields?: boolean;
 }) {
   const api = apiPrefix.replace(/\/$/, "");
   const [selectedSite, setSelectedSite] = useState<{ id: string; name: string; url: string } | null>(null);
@@ -53,7 +67,9 @@ export function ContentProductionTool({
   const [addError, setAddError] = useState<string | null>(null);
   const [addLoading, setAddLoading] = useState(false);
   const [addSuccess, setAddSuccess] = useState(false);
-  const [linkSyncingId, setLinkSyncingId] = useState<string | null>(null);
+  const [linkSyncBusy, setLinkSyncBusy] = useState<{ siteId: string; kind: "posts" | "products" } | null>(
+    null
+  );
   const [linkSyncNotice, setLinkSyncNotice] = useState<string | null>(null);
   const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null);
   const [title, setTitle] = useState("");
@@ -63,6 +79,13 @@ export function ContentProductionTool({
   const [keywordExtractError, setKeywordExtractError] = useState<string | null>(null);
   const [keywordExtractInfo, setKeywordExtractInfo] = useState<string | null>(null);
   const [referenceUrl, setReferenceUrl] = useState("");
+  const [editorialBrief, setEditorialBrief] = useState("");
+  const [sheetRows, setSheetRows] = useState<ArticleSheetRow[]>([]);
+  const [sheetLoading, setSheetLoading] = useState(false);
+  const [sheetError, setSheetError] = useState<string | null>(null);
+  const [sheetLoadedLabel, setSheetLoadedLabel] = useState<string | null>(null);
+  const [contentAngle, setContentAngle] = useState("");
+  const [productTypeForLinks, setProductTypeForLinks] = useState("");
   const [wordCount, setWordCount] = useState(1500);
   const [generating, setGenerating] = useState(false);
   const [contentLoading, setContentLoading] = useState(false);
@@ -81,6 +104,7 @@ export function ContentProductionTool({
     postUrl: string;
     editUrl: string;
     site: { name: string; url: string };
+    rankMath?: { focusKeyphrase?: string; metaDescriptionSet?: boolean };
     yoast?: { focusKeyphrase?: string; metaDescriptionSet?: boolean };
   } | null>(null);
   const [regeneratingIndex, setRegeneratingIndex] = useState<number | null>(null);
@@ -110,6 +134,46 @@ export function ContentProductionTool({
 
   useEffect(() => {
     fetchSites();
+  }, []);
+
+  const fetchArticleSheetRows = useCallback(async () => {
+    if (!articleSheetFromGoogle) return;
+    setSheetError(null);
+    setSheetLoading(true);
+    try {
+      const res = await fetch(`${api}/article-sheet`);
+      const data = (await res.json().catch(() => ({}))) as { rows?: ArticleSheetRow[]; error?: string };
+      if (!res.ok) {
+        setSheetError(data.error ?? "Failed to load sheet");
+        setSheetRows([]);
+        return;
+      }
+      setSheetRows(Array.isArray(data.rows) ? data.rows : []);
+    } catch {
+      setSheetError("Network error loading sheet");
+      setSheetRows([]);
+    } finally {
+      setSheetLoading(false);
+    }
+  }, [api, articleSheetFromGoogle]);
+
+  useEffect(() => {
+    if (!articleSheetFromGoogle || !selectedSite) return;
+    void fetchArticleSheetRows();
+  }, [articleSheetFromGoogle, selectedSite?.id, fetchArticleSheetRows]);
+
+  const applySheetRowToForm = useCallback((row: ArticleSheetRow) => {
+    setTitle(row.articleTitle);
+    const kws = targetKeywordToKeywords(row.targetKeyword);
+    setKeywords(kws);
+    setEditorialBrief(buildEditorialBriefFromRow(row));
+    setSheetLoadedLabel(`Row ${row.sheetRow}${row.id ? ` · ID ${row.id}` : ""}`);
+    setKeywordExtractError(null);
+    if (kws.length === 0) {
+      setKeywordExtractInfo("This sheet row has no target keyword — add keywords below before generating.");
+    } else {
+      setKeywordExtractInfo(null);
+    }
   }, []);
 
   const handleSaveEdit = async (id: string) => {
@@ -183,7 +247,7 @@ export function ContentProductionTool({
 
   const handleSyncInternalLinks = async (siteId: string) => {
     setLinkSyncNotice(null);
-    setLinkSyncingId(siteId);
+    setLinkSyncBusy({ siteId, kind: "posts" });
     try {
       const res = await fetch(`${api}/sites/${siteId}/sync-internal-links`, { method: "POST" });
       const data = (await res.json().catch(() => ({}))) as { error?: string; count?: number };
@@ -191,11 +255,29 @@ export function ContentProductionTool({
         setLinkSyncNotice(data.error ?? "Sync failed");
         return;
       }
-      setLinkSyncNotice(`Post links updated for this site (${data.count ?? 0} URLs). Product links stay separate when added.`);
+      setLinkSyncNotice(`Post links updated for this site (${data.count ?? 0} URLs).`);
     } catch {
-      setLinkSyncNotice("Network error while syncing links");
+      setLinkSyncNotice("Network error while syncing post links");
     } finally {
-      setLinkSyncingId(null);
+      setLinkSyncBusy(null);
+    }
+  };
+
+  const handleSyncProductLinks = async (siteId: string) => {
+    setLinkSyncNotice(null);
+    setLinkSyncBusy({ siteId, kind: "products" });
+    try {
+      const res = await fetch(`${api}/sites/${siteId}/sync-product-links`, { method: "POST" });
+      const data = (await res.json().catch(() => ({}))) as { error?: string; count?: number };
+      if (!res.ok) {
+        setLinkSyncNotice(data.error ?? "Product sync failed");
+        return;
+      }
+      setLinkSyncNotice(`Product links updated for this site (${data.count ?? 0} URLs).`);
+    } catch {
+      setLinkSyncNotice("Network error while syncing product links");
+    } finally {
+      setLinkSyncBusy(null);
     }
   };
 
@@ -327,6 +409,11 @@ export function ContentProductionTool({
           title: title.trim(),
           keywords,
           wordCount,
+          ...(editorialBrief.trim() ? { editorialBrief: editorialBrief.trim() } : {}),
+          ...(manualBriefFields && contentAngle.trim() ? { contentAngle: contentAngle.trim() } : {}),
+          ...(manualBriefFields && productTypeForLinks.trim()
+            ? { productTypeForLinks: productTypeForLinks.trim() }
+            : {}),
         }),
       });
       const contentData = await contentRes.json();
@@ -612,7 +699,7 @@ export function ContentProductionTool({
           title: titleTrim,
           content: approvedContent,
           images: uploadedRefs,
-          referenceUrl: referenceUrl.trim() || undefined,
+          referenceUrl: showReferenceUrl ? referenceUrl.trim() || undefined : undefined,
           keywords,
         }),
       });
@@ -647,6 +734,7 @@ export function ContentProductionTool({
         postUrl: data.postUrl as string,
         editUrl: data.editUrl as string,
         site: (data.site as { name: string; url: string }) ?? { name: selectedSite.name, url: selectedSite.url },
+        rankMath: data.rankMath as { focusKeyphrase?: string; metaDescriptionSet?: boolean } | undefined,
         yoast: data.yoast as { focusKeyphrase?: string; metaDescriptionSet?: boolean } | undefined,
       });
     } catch (err) {
@@ -658,7 +746,7 @@ export function ContentProductionTool({
       setPublishing(false);
       setPublishStep(null);
     }
-  }, [selectedSite, title, approvedContent, generatedImages, referenceUrl, keywords, api]);
+  }, [selectedSite, title, approvedContent, generatedImages, referenceUrl, keywords, api, showReferenceUrl]);
 
   const handleStartNewPost = useCallback(() => {
     setTitle("");
@@ -666,6 +754,10 @@ export function ContentProductionTool({
     setKeywordInput("");
     setKeywordExtractError(null);
     setReferenceUrl("");
+    setEditorialBrief("");
+    setSheetLoadedLabel(null);
+    setContentAngle("");
+    setProductTypeForLinks("");
     setGeneratedContent(null);
     setGeneratedImages(null);
     setInternalLinksUsed([]);
@@ -693,13 +785,14 @@ export function ContentProductionTool({
           </svg>
           <span className="text-sm font-semibold">Site manager</span>
           <span className="hidden text-xs font-normal text-slate-400 sm:inline">
-            {panelOpen ? "Hide" : "Add sites · Sync post links"}
+            {panelOpen ? "Hide" : "Add sites · Sync post & product links"}
           </span>
         </button>
         {!panelOpen ? (
           <p className="max-w-md text-right text-[11px] text-slate-400">
             Open Site manager to add WordPress sites and use{" "}
-            <strong className="font-medium text-slate-500">Sync post links</strong> per site.
+            <strong className="font-medium text-slate-500">Sync post links</strong> and{" "}
+            <strong className="font-medium text-slate-500">Sync product links</strong> per site.
           </p>
         ) : null}
       </div>
@@ -709,9 +802,10 @@ export function ContentProductionTool({
           <h2 className="mb-4 text-sm font-semibold uppercase tracking-wider text-slate-500">Site Manager</h2>
           <p className="mb-4 text-xs leading-relaxed text-slate-500">
             <strong className="font-medium text-slate-600">Internal links:</strong> Each WordPress site has its own rows
-            in Supabase (keyed by site id; nothing mixes between sites). <strong>Sync post links</strong> refreshes
-            blog URLs only; product URLs (e.g. WooCommerce) will use a separate sync with{" "}
-            <code className="rounded bg-slate-200/80 px-1">kind=product</code> later. Run migrations{" "}
+            in Supabase (keyed by site id; nothing mixes between sites). <strong>Sync post links</strong> pulls blog
+            URLs from WordPress; <strong>Sync product links</strong> pulls WooCommerce catalog URLs (
+            <code className="rounded bg-slate-200/80 px-1">wc/v3/products</code>, stored as{" "}
+            <code className="rounded bg-slate-200/80 px-1">kind=product</code>). Run migrations{" "}
             <code className="rounded bg-slate-200/80 px-1">005</code> and{" "}
             <code className="rounded bg-slate-200/80 px-1">006_site_internal_links_kind_scope.sql</code>.
           </p>
@@ -780,11 +874,23 @@ export function ContentProductionTool({
                         </button>
                         <button
                           type="button"
-                          disabled={linkSyncingId === site.id}
+                          disabled={linkSyncBusy?.siteId === site.id}
                           onClick={() => void handleSyncInternalLinks(site.id)}
                           className="rounded border border-indigo-200 bg-indigo-50 px-2 py-1 text-xs font-medium text-indigo-800 hover:bg-indigo-100 disabled:opacity-50"
                         >
-                          {linkSyncingId === site.id ? "Syncing posts…" : "Sync post links"}
+                          {linkSyncBusy?.siteId === site.id && linkSyncBusy.kind === "posts"
+                            ? "Syncing posts…"
+                            : "Sync post links"}
+                        </button>
+                        <button
+                          type="button"
+                          disabled={linkSyncBusy?.siteId === site.id}
+                          onClick={() => void handleSyncProductLinks(site.id)}
+                          className="rounded border border-violet-200 bg-violet-50 px-2 py-1 text-xs font-medium text-violet-900 hover:bg-violet-100 disabled:opacity-50"
+                        >
+                          {linkSyncBusy?.siteId === site.id && linkSyncBusy.kind === "products"
+                            ? "Syncing products…"
+                            : "Sync product links"}
                         </button>
                         {deleteConfirmId === site.id ? (
                           <>
@@ -917,6 +1023,74 @@ export function ContentProductionTool({
         </div>
       </div>
 
+      {siteUnlocked && articleSheetFromGoogle ? (
+        <div className="rounded-xl border border-emerald-200 bg-emerald-50/40 p-4">
+          <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
+            <h2 className="text-sm font-semibold text-emerald-900">Article queue (Google Sheet)</h2>
+            <button
+              type="button"
+              onClick={() => void fetchArticleSheetRows()}
+              disabled={sheetLoading}
+              className="rounded border border-emerald-300 bg-white px-2.5 py-1 text-xs font-medium text-emerald-900 hover:bg-emerald-50 disabled:opacity-50"
+            >
+              {sheetLoading ? "Loading…" : "Refresh from sheet"}
+            </button>
+          </div>
+          <p className="mb-3 text-xs text-emerald-800/90">
+            Pick a row and load it into the form below, then generate — one article at a time. Calendar fields (cluster,
+            angle, etc.) are sent to Claude as an editorial brief.
+          </p>
+          {sheetError ? (
+            <p className="mb-2 rounded border border-red-200 bg-red-50 px-2 py-1.5 text-xs text-red-800">{sheetError}</p>
+          ) : null}
+          {sheetRows.length > 0 ? (
+            <div className="max-h-64 overflow-auto rounded border border-emerald-100 bg-white">
+              <table className="w-full min-w-[640px] text-left text-xs">
+                <thead className="sticky top-0 bg-emerald-100/80 text-emerald-950">
+                  <tr>
+                    <th className="px-2 py-1.5 font-medium">Row</th>
+                    <th className="px-2 py-1.5 font-medium">ID</th>
+                    <th className="px-2 py-1.5 font-medium">Title</th>
+                    <th className="px-2 py-1.5 font-medium">Target keyword</th>
+                    <th className="px-2 py-1.5 font-medium">Priority</th>
+                    <th className="px-2 py-1.5 font-medium"> </th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {sheetRows.map((row) => (
+                    <tr key={`${row.sheetRow}-${row.id}-${row.articleTitle.slice(0, 24)}`} className="border-t border-emerald-50">
+                      <td className="px-2 py-1.5 text-slate-600">{row.sheetRow}</td>
+                      <td className="px-2 py-1.5 text-slate-600">{row.id}</td>
+                      <td className="max-w-[220px] truncate px-2 py-1.5 text-slate-900" title={row.articleTitle}>
+                        {row.articleTitle}
+                      </td>
+                      <td className="max-w-[160px] truncate px-2 py-1.5 text-slate-600" title={row.targetKeyword}>
+                        {row.targetKeyword}
+                      </td>
+                      <td className="px-2 py-1.5 text-slate-600">{row.priority}</td>
+                      <td className="px-2 py-1.5">
+                        <button
+                          type="button"
+                          onClick={() => applySheetRowToForm(row)}
+                          className="rounded bg-emerald-600 px-2 py-0.5 text-[11px] font-medium text-white hover:bg-emerald-700"
+                        >
+                          Load
+                        </button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          ) : !sheetLoading && !sheetError ? (
+            <p className="text-xs text-emerald-800/80">No data rows yet. Check the sheet tab name in WEED_ARTICLE_SHEET_RANGE if this stays empty.</p>
+          ) : null}
+          {sheetLoadedLabel ? (
+            <p className="mt-2 text-xs font-medium text-emerald-900">Loaded: {sheetLoadedLabel}</p>
+          ) : null}
+        </div>
+      ) : null}
+
       {/* Section 1 — Input form (unlocks after site selected) */}
       <div className={siteUnlocked ? "" : "opacity-50 pointer-events-none"}>
         <h2 className="text-sm font-medium text-slate-500">Input</h2>
@@ -933,81 +1107,157 @@ export function ContentProductionTool({
                 className="w-full rounded border border-slate-200 px-3 py-2 text-sm"
               />
             </div>
-            <div>
-              <div className="mb-1 flex flex-wrap items-center justify-between gap-2">
-                <label className="block text-xs text-slate-500">Keywords</label>
-                <button
-                  type="button"
-                  onClick={handleExtractKeywordsFromTitle}
-                  disabled={keywordExtractLoading || !title.trim()}
-                  className="rounded border border-teal-200 bg-teal-50 px-2.5 py-1 text-xs font-medium text-teal-800 hover:bg-teal-100 disabled:cursor-not-allowed disabled:opacity-50"
-                >
-                  {keywordExtractLoading ? "Extracting…" : "Extract from title"}
-                </button>
-              </div>
-              <p className="mb-2 text-xs text-slate-500">
-                Claude proposes phrases (including 1–2 WordPress-focused terms). If{" "}
-                <span className="font-mono text-[11px]">AHREFS_API_KEY</span> is set server-side, Ahrefs matching
-                terms (sorted by estimated monthly volume) are merged first. Consumes Ahrefs API units.
-              </p>
-              {keywordExtractError && (
-                <div className="mb-2 rounded border border-amber-200 bg-amber-50 px-2 py-1.5 text-xs text-amber-900">
-                  {keywordExtractError}
-                </div>
-              )}
-              {keywordExtractInfo && !keywordExtractError && (
-                <div className="mb-2 rounded border border-sky-200 bg-sky-50 px-2 py-1.5 text-xs text-sky-900">
-                  {keywordExtractInfo}
-                </div>
-              )}
-              <div className="flex flex-wrap gap-2 rounded border border-slate-200 bg-white p-2">
-                {keywords.map((kw, i) => (
-                  <span
-                    key={i}
-                    className="inline-flex items-center gap-1 rounded-full bg-teal-100 px-2.5 py-0.5 text-sm text-teal-800"
-                  >
-                    {kw}
+            {manualBriefFields ? (
+              <>
+                <div>
+                  <div className="mb-1 flex flex-wrap items-center justify-between gap-2">
+                    <label className="block text-xs text-slate-500">Target keyword(s)</label>
                     <button
                       type="button"
-                      onClick={() => removeKeyword(i)}
-                      className="ml-0.5 rounded-full p-0.5 hover:bg-teal-200"
-                      aria-label="Remove"
+                      onClick={handleExtractKeywordsFromTitle}
+                      disabled={keywordExtractLoading || !title.trim()}
+                      className="rounded border border-teal-200 bg-teal-50 px-2.5 py-1 text-xs font-medium text-teal-800 hover:bg-teal-100 disabled:cursor-not-allowed disabled:opacity-50"
                     >
-                      <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                      </svg>
+                      {keywordExtractLoading ? "Extracting…" : "Extract from title"}
                     </button>
-                  </span>
-                ))}
-                <input
-                  type="text"
-                  value={keywordInput}
-                  onChange={(e) => setKeywordInput(e.target.value)}
-                  onKeyDown={handleKeywordKeyDown}
-                  onBlur={addKeyword}
-                  placeholder="Type keyword + Enter or comma"
-                  className="min-w-[180px] flex-1 border-0 bg-transparent px-1 py-0.5 text-sm outline-none"
-                />
+                  </div>
+                  <p className="mb-2 text-xs text-slate-500">
+                    Primary phrases for SEO and internal link matching; separate multiple with commas. Extract from title
+                    merges suggestions into this field.
+                  </p>
+                  {keywordExtractError && (
+                    <div className="mb-2 rounded border border-amber-200 bg-amber-50 px-2 py-1.5 text-xs text-amber-900">
+                      {keywordExtractError}
+                    </div>
+                  )}
+                  {keywordExtractInfo && !keywordExtractError && (
+                    <div className="mb-2 rounded border border-sky-200 bg-sky-50 px-2 py-1.5 text-xs text-sky-900">
+                      {keywordExtractInfo}
+                    </div>
+                  )}
+                  <input
+                    type="text"
+                    value={keywords.join(", ")}
+                    onChange={(e) => setKeywords(targetKeywordToKeywords(e.target.value))}
+                    placeholder="e.g. best cbd gummies for sleep"
+                    className="w-full rounded border border-slate-200 px-3 py-2 text-sm"
+                  />
+                </div>
+                <div>
+                  <label className="mb-1 block text-xs text-slate-500">Product type (for internal links)</label>
+                  <input
+                    type="text"
+                    value={productTypeForLinks}
+                    onChange={(e) => setProductTypeForLinks(e.target.value)}
+                    placeholder="e.g. Gummies, Vapes, Carts"
+                    className="w-full rounded border border-slate-200 px-3 py-2 text-sm"
+                  />
+                  <p className="mt-1 text-xs text-slate-500">
+                    When set, up to two matching <strong>product</strong> URLs from your library are prioritized for
+                    Claude (after <span className="font-medium">Sync product links</span>). The model is instructed to use
+                    1–2 product links when they fit.
+                  </p>
+                </div>
+                <div>
+                  <label className="mb-1 block text-xs text-slate-500">Content angle</label>
+                  <textarea
+                    value={contentAngle}
+                    onChange={(e) => setContentAngle(e.target.value)}
+                    placeholder="e.g. Educational buyer guide, FAQ / how-to, comparison…"
+                    rows={3}
+                    className="w-full rounded border border-slate-200 px-3 py-2 text-sm"
+                  />
+                </div>
+              </>
+            ) : (
+              <div>
+                <div className="mb-1 flex flex-wrap items-center justify-between gap-2">
+                  <label className="block text-xs text-slate-500">Keywords</label>
+                  <button
+                    type="button"
+                    onClick={handleExtractKeywordsFromTitle}
+                    disabled={keywordExtractLoading || !title.trim()}
+                    className="rounded border border-teal-200 bg-teal-50 px-2.5 py-1 text-xs font-medium text-teal-800 hover:bg-teal-100 disabled:cursor-not-allowed disabled:opacity-50"
+                  >
+                    {keywordExtractLoading ? "Extracting…" : "Extract from title"}
+                  </button>
+                </div>
+                <p className="mb-2 text-xs text-slate-500">
+                  Claude proposes phrases (including 1–2 WordPress-focused terms). If{" "}
+                  <span className="font-mono text-[11px]">AHREFS_API_KEY</span> is set server-side, Ahrefs matching
+                  terms (sorted by estimated monthly volume) are merged first. Consumes Ahrefs API units.
+                </p>
+                {keywordExtractError && (
+                  <div className="mb-2 rounded border border-amber-200 bg-amber-50 px-2 py-1.5 text-xs text-amber-900">
+                    {keywordExtractError}
+                  </div>
+                )}
+                {keywordExtractInfo && !keywordExtractError && (
+                  <div className="mb-2 rounded border border-sky-200 bg-sky-50 px-2 py-1.5 text-xs text-sky-900">
+                    {keywordExtractInfo}
+                  </div>
+                )}
+                <div className="flex flex-wrap gap-2 rounded border border-slate-200 bg-white p-2">
+                  {keywords.map((kw, i) => (
+                    <span
+                      key={i}
+                      className="inline-flex items-center gap-1 rounded-full bg-teal-100 px-2.5 py-0.5 text-sm text-teal-800"
+                    >
+                      {kw}
+                      <button
+                        type="button"
+                        onClick={() => removeKeyword(i)}
+                        className="ml-0.5 rounded-full p-0.5 hover:bg-teal-200"
+                        aria-label="Remove"
+                      >
+                        <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                        </svg>
+                      </button>
+                    </span>
+                  ))}
+                  <input
+                    type="text"
+                    value={keywordInput}
+                    onChange={(e) => setKeywordInput(e.target.value)}
+                    onKeyDown={handleKeywordKeyDown}
+                    onBlur={addKeyword}
+                    placeholder="Type keyword + Enter or comma"
+                    className="min-w-[180px] flex-1 border-0 bg-transparent px-1 py-0.5 text-sm outline-none"
+                  />
+                </div>
               </div>
-            </div>
-            <div>
-              <label className="mb-1 block text-xs text-slate-500">Source / reference URL (optional)</label>
-              <input
-                type="url"
-                value={referenceUrl}
-                onChange={(e) => setReferenceUrl(e.target.value)}
-                placeholder="https://example.com/original-article"
-                className="w-full rounded border border-slate-200 px-3 py-2 text-sm"
-              />
-              <p className="mt-1 text-xs text-slate-500">
-                If set, this is appended at the <span className="font-medium">end of the post body</span> when you publish:
-                <span className="mt-1 block font-mono text-[11px] leading-relaxed text-slate-600">
-                  This article is for informational purposes only.
-                  <br />
-                  Reference: [your URL]
-                </span>
+            )}
+            {showReferenceUrl ? (
+              <div>
+                <label className="mb-1 block text-xs text-slate-500">Source / reference URL (optional)</label>
+                <input
+                  type="url"
+                  value={referenceUrl}
+                  onChange={(e) => setReferenceUrl(e.target.value)}
+                  placeholder="https://example.com/original-article"
+                  className="w-full rounded border border-slate-200 px-3 py-2 text-sm"
+                />
+                <p className="mt-1 text-xs text-slate-500">
+                  If set, this is appended at the <span className="font-medium">end of the post body</span> when you publish:
+                  <span className="mt-1 block font-mono text-[11px] leading-relaxed text-slate-600">
+                    This article is for informational purposes only.
+                    <br />
+                    Reference: [your URL]
+                  </span>
+                </p>
+              </div>
+            ) : null}
+            {articleSheetFromGoogle && editorialBrief.trim() ? (
+              <p className="rounded border border-sky-100 bg-sky-50 px-2 py-1.5 text-xs text-sky-900">
+                Editorial brief from the sheet will be included when you generate (cluster, angle, product type, notes).
               </p>
-            </div>
+            ) : null}
+            {manualBriefFields && (contentAngle.trim() || productTypeForLinks.trim()) ? (
+              <p className="rounded border border-sky-100 bg-sky-50 px-2 py-1.5 text-xs text-sky-900">
+                Content angle and product type will be included in the generate request with your target keyword(s).
+              </p>
+            ) : null}
             <div>
               <label className="mb-2 block text-xs text-slate-500">Word count</label>
               <div className="flex gap-2">
@@ -1262,15 +1512,21 @@ export function ContentProductionTool({
             <div className="rounded-lg border border-green-200 bg-green-50 p-4">
               <p className="font-medium text-green-800">Draft published successfully</p>
               <p className="mt-1 text-sm text-green-700">{publishResult.site.name} – {title}</p>
-              {publishResult.yoast?.focusKeyphrase != null && (
-                <p className="mt-2 text-sm text-green-800">
-                  Yoast SEO: attempted to set meta description, SEO title, and focus keyphrase via REST (focus:{" "}
-                  <span className="font-mono">{publishResult.yoast.focusKeyphrase}</span>
-                  {publishResult.yoast.metaDescriptionSet === false
-                    ? ". WordPress rejected meta fields; check Yoast REST support for posts."
-                    : "."}
-                </p>
-              )}
+              {(() => {
+                const seo = publishResult.rankMath ?? publishResult.yoast;
+                const label = publishResult.rankMath ? "Rank Math" : "Yoast SEO";
+                if (seo?.focusKeyphrase == null) return null;
+                const rejected = seo.metaDescriptionSet === false;
+                return (
+                  <p className="mt-2 text-sm text-green-800">
+                    {label}: attempted meta title, description, and focus keyword via REST (focus:{" "}
+                    <span className="font-mono">{seo.focusKeyphrase}</span>
+                    {rejected
+                      ? ". WordPress did not persist meta fields; Rank Math may need REST meta registration on the site."
+                      : "."}
+                  </p>
+                );
+              })()}
               <div className="mt-3 flex flex-wrap gap-2">
                 <a
                   href={publishResult.editUrl}
@@ -1296,7 +1552,7 @@ export function ContentProductionTool({
                 <p><span className="font-medium text-slate-600">Post title:</span> {title}</p>
                 <p><span className="font-medium text-slate-600">Word count:</span> {contentWordCount}</p>
                 <p><span className="font-medium text-slate-600">Images:</span> {includedImagesCount}</p>
-                {referenceUrl.trim() ? (
+                {showReferenceUrl && referenceUrl.trim() ? (
                   <p>
                     <span className="font-medium text-slate-600">Reference footer:</span>{" "}
                     <span className="text-teal-700">Yes — disclaimer + link at end of post</span>

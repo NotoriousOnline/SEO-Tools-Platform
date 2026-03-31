@@ -10,12 +10,20 @@
  */
 import { getSupabaseAdmin } from "@/lib/supabase";
 import { getSiteById, type WPToolScope } from "@/lib/wpSites";
-import { fetchAllPostsForLinkLibrary, type WPPostListItem } from "@/lib/wordpressClient";
+import {
+  fetchAllPostsForLinkLibrary,
+  fetchAllProductsForLinkLibrary,
+  type WPPostListItem,
+  type WCProductListItem,
+} from "@/lib/wordpressClient";
 
 export type LinkCandidate = { title: string; url: string };
 
 /** Rows replaced only by WordPress post/page sync — never delete `product` here. */
 const POST_PAGE_KINDS = ["post", "page"] as const;
+
+/** Rows replaced only by WooCommerce product sync — never delete post/page here. */
+const PRODUCT_KINDS = ["product"] as const;
 
 function stripHtml(s: string): string {
   return s.replace(/<[^>]+>/g, " ").replace(/\s+/g, " ").trim();
@@ -45,6 +53,79 @@ function scoreRow(
   const blob = [row.title, row.slug, row.excerpt, row.search_text].filter(Boolean).join(" ");
   const phrases = [...keywords, articleTitle].filter((s) => typeof s === "string" && s.trim().length > 0);
   return scoreTextAgainstPhrases(blob, phrases);
+}
+
+export type LinkLibraryRow = {
+  title: string;
+  url: string;
+  slug: string | null;
+  excerpt: string | null;
+  search_text: string | null;
+  kind: string | null;
+};
+
+export type GetCandidatesOptions = {
+  /** When set with a non-empty value, up to `productLinkSlots` product URLs are placed first in the candidate list. */
+  productTypeHint?: string;
+  /** Max product URLs to reserve (clamped 1–2). Default 2. */
+  productLinkSlots?: number;
+};
+
+/**
+ * Same as pickDiverseLinkCandidates but first reserves slots for `kind=product` rows that match `productTypeHint`.
+ */
+export function pickLinkCandidatesWithProductBias(
+  rows: LinkLibraryRow[],
+  keywords: string[],
+  articleTitle: string,
+  count: number,
+  options?: GetCandidatesOptions
+): LinkCandidate[] {
+  const hint = options?.productTypeHint?.trim();
+  const rawSlots = options?.productLinkSlots ?? 2;
+  const slots = hint ? Math.min(2, Math.max(1, rawSlots)) : 0;
+
+  if (!hint || slots === 0) {
+    return pickDiverseLinkCandidates(rows, keywords, articleTitle, count);
+  }
+
+  const products = rows.filter((r) => (r.kind ?? "").toLowerCase() === "product");
+  const seen = new Set<string>();
+  const out: LinkCandidate[] = [];
+
+  if (products.length > 0) {
+    const scored = products.map((r) => {
+      const blob = [r.title, r.slug, r.excerpt, r.search_text].filter(Boolean).join(" ");
+      const base = scoreRow(r, keywords, articleTitle);
+      const hintScore = scoreTextAgainstPhrases(blob, [hint]);
+      return { r, score: base + hintScore * 3 };
+    });
+    scored.sort((a, b) => b.score - a.score);
+    for (const { r } of scored) {
+      if (out.length >= slots) break;
+      const u = r.url.trim();
+      if (!u || seen.has(u)) continue;
+      seen.add(u);
+      out.push({ title: r.title || "Untitled", url: u });
+    }
+  }
+
+  const remaining = count - out.length;
+  if (remaining <= 0) return out.slice(0, count);
+
+  const others = rows.filter((r) => {
+    const u = r.url.trim();
+    return u && !seen.has(u);
+  });
+  const rest = pickDiverseLinkCandidates(others, keywords, articleTitle, remaining);
+  for (const c of rest) {
+    if (out.length >= count) break;
+    if (seen.has(c.url)) continue;
+    seen.add(c.url);
+    out.push(c);
+  }
+
+  return out;
 }
 
 /**
@@ -91,14 +172,12 @@ export function pickDiverseLinkCandidates(
   return out;
 }
 
-export async function fetchLibraryRowsForSite(wpSiteId: string): Promise<
-  { title: string; url: string; slug: string | null; excerpt: string | null; search_text: string | null }[]
-> {
+export async function fetchLibraryRowsForSite(wpSiteId: string): Promise<LinkLibraryRow[]> {
   try {
     const sb = getSupabaseAdmin();
     const { data, error } = await sb
       .from("site_internal_links")
-      .select("title, url, slug, excerpt, search_text")
+      .select("title, url, slug, excerpt, search_text, kind")
       .eq("wp_site_id", wpSiteId);
 
     if (error) {
@@ -108,13 +187,7 @@ export async function fetchLibraryRowsForSite(wpSiteId: string): Promise<
       console.warn("[siteLinkLibrary] select error:", error.message);
       return [];
     }
-    return (data ?? []) as {
-      title: string;
-      url: string;
-      slug: string | null;
-      excerpt: string | null;
-      search_text: string | null;
-    }[];
+    return (data ?? []) as LinkLibraryRow[];
   } catch (e) {
     console.warn("[siteLinkLibrary] fetch rows:", e);
     return [];
@@ -126,10 +199,11 @@ export async function getCandidatesFromLibrary(
   wpSiteId: string,
   keywords: string[],
   articleTitle: string,
-  count: number
+  count: number,
+  options?: GetCandidatesOptions
 ): Promise<LinkCandidate[]> {
   const rows = await fetchLibraryRowsForSite(wpSiteId);
-  return pickDiverseLinkCandidates(rows, keywords, articleTitle, count);
+  return pickLinkCandidatesWithProductBias(rows, keywords, articleTitle, count, options);
 }
 
 function mapWpPostToRows(wpSiteId: string, posts: WPPostListItem[]) {
@@ -145,6 +219,26 @@ function mapWpPostToRows(wpSiteId: string, posts: WPPostListItem[]) {
       title,
       slug: p.slug ?? null,
       kind: "post" as const,
+      excerpt: excerpt || null,
+      search_text: searchBlob || null,
+      source_updated_at: now,
+    };
+  });
+}
+
+function mapWcProductToRows(wpSiteId: string, products: WCProductListItem[]) {
+  const now = new Date().toISOString();
+  return products.map((p) => {
+    const title = stripHtml(p.name ?? "") || p.slug || "Untitled";
+    const excerpt = stripHtml(p.short_description ?? "");
+    const searchBlob = [title, p.slug, excerpt].filter(Boolean).join(" ").slice(0, 8000);
+    return {
+      wp_site_id: wpSiteId,
+      wp_post_id: p.id,
+      url: p.permalink,
+      title,
+      slug: p.slug ?? null,
+      kind: "product" as const,
       excerpt: excerpt || null,
       search_text: searchBlob || null,
       source_updated_at: now,
@@ -182,6 +276,43 @@ export async function syncInternalLinksFromWordPress(
   }
 
   const rows = mapWpPostToRows(wpSiteId, all);
+  for (let i = 0; i < rows.length; i += SYNC_CHUNK) {
+    const chunk = rows.slice(i, i + SYNC_CHUNK);
+    const { error: insErr } = await sb.from("site_internal_links").insert(chunk);
+    if (insErr) throw insErr;
+  }
+
+  return { count: rows.length };
+}
+
+/** Replace all product link rows for this site with fresh data from WooCommerce REST. */
+export async function syncProductInternalLinksFromWordPress(
+  wpSiteId: string,
+  toolScope: WPToolScope
+): Promise<{ count: number }> {
+  const site = await getSiteById(wpSiteId, toolScope);
+  if (!site) {
+    throw new Error("Site not found");
+  }
+
+  const all = await fetchAllProductsForLinkLibrary(site);
+
+  const sb = getSupabaseAdmin();
+  const { error: delErr } = await sb
+    .from("site_internal_links")
+    .delete()
+    .eq("wp_site_id", wpSiteId)
+    .in("kind", [...PRODUCT_KINDS]);
+  if (delErr) {
+    if (delErr.code === "PGRST205" || (delErr.message && delErr.message.includes("Could not find"))) {
+      throw new Error(
+        'Table "site_internal_links" was not found. Run supabase/migrations/005_site_internal_links.sql in the Supabase SQL editor.'
+      );
+    }
+    throw delErr;
+  }
+
+  const rows = mapWcProductToRows(wpSiteId, all);
   for (let i = 0; i < rows.length; i += SYNC_CHUNK) {
     const chunk = rows.slice(i, i + SYNC_CHUNK);
     const { error: insErr } = await sb.from("site_internal_links").insert(chunk);
