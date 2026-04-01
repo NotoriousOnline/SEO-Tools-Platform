@@ -16,10 +16,58 @@ function wpRestUserAgent(): string {
 }
 
 /**
+ * Optional hard override for REST base URL (useful when site.url is proxied by WAF but
+ * a separate unproxied origin/subdomain is available for /wp-json/).
+ */
+function resolveWpRestBase(base: string): string {
+  const override = (process.env.WORDPRESS_REST_BASE_URL ?? "").trim();
+  return override || base;
+}
+
+/** Absolute origin for Referer/Origin (handles URLs stored without https://). */
+function siteRestOrigin(site: WPSite): string {
+  const raw = resolveWpRestBase((site.url ?? "").trim()).replace(/\/$/, "");
+  const withProtocol = /^https?:\/\//i.test(raw) ? raw : `https://${raw}`;
+  try {
+    return new URL(withProtocol).origin;
+  } catch {
+    return withProtocol.startsWith("http") ? withProtocol : `https://${raw}`;
+  }
+}
+
+function looksLikeCloudflareBlock(body: string): boolean {
+  return /just a moment|__cf_chl|cf-chl-|challenge-platform|cloudflare/i.test(body);
+}
+
+function wafBypassEnvConfigured(): boolean {
+  const c = (process.env.WORDPRESS_WAF_BYPASS_COOKIE ?? "").trim();
+  const q = (process.env.WORDPRESS_WAF_BYPASS_QUERY ?? "").trim();
+  const hn = (process.env.WORDPRESS_WAF_BYPASS_HEADER_NAME ?? "").trim();
+  const hv = (process.env.WORDPRESS_WAF_BYPASS_HEADER_VALUE ?? "").trim();
+  return !!(c || q || (hn && hv));
+}
+
+function cloudflareExtraHint(): string {
+  if (!wafBypassEnvConfigured()) {
+    return " Runtime check: no WORDPRESS_WAF_* bypass vars detected—add them in the Vercel project (Production), not only .env.local, then redeploy.";
+  }
+  return " Runtime check: WAF bypass env is set, but Cloudflare still blocked the request. Ask infra to confirm the rule matches this host, URI path /wp-json/, method POST, and the exact cookie name/value; try adding WORDPRESS_WAF_BYPASS_QUERY if the rule also expects a query string.";
+}
+
+function formatWordPressHttpError(status: number, body: string): string {
+  const trimmed = body.trim();
+  if (looksLikeCloudflareBlock(trimmed)) {
+    return `${status} WordPress REST is blocked by Cloudflare (challenge HTML, not JSON). On Vercel set WORDPRESS_WAF_BYPASS_QUERY, WORDPRESS_WAF_BYPASS_COOKIE, and/or WORDPRESS_WAF_BYPASS_HEADER_* to match your WAF allowlist, or allowlist this app’s egress IPs. See .env.example.${cloudflareExtraHint()}`;
+  }
+  const max = 400;
+  return trimmed.length > max ? `${status} ${trimmed.slice(0, max)}…` : `${status} ${trimmed}`;
+}
+
+/**
  * WordPress REST URL with optional WAF bypass query (e.g. bypass_key=secret) for Cloudflare allowlists.
  */
 export function wpRestUrl(base: string, restPathAndQuery: string): string {
-  const rawBase = (base ?? "").trim();
+  const rawBase = resolveWpRestBase((base ?? "").trim());
   const withProtocol = /^https?:\/\//i.test(rawBase) ? rawBase : `https://${rawBase}`;
   const parsed = new URL(withProtocol);
   const normalizedPath = parsed.pathname.replace(/\/$/, "");
@@ -52,16 +100,27 @@ export function getAuthHeader(site: WPSite): string {
 
 /** Standard headers for WordPress REST (auth + browser-like UA). */
 export function wpRestHeaders(site: WPSite, opts?: { contentTypeJson?: boolean }): Record<string, string> {
-  const origin = site.url.replace(/\/$/, "");
+  const originRoot = siteRestOrigin(site);
   const h: Record<string, string> = {
     Authorization: getAuthHeader(site),
     Accept: "application/json",
     "User-Agent": wpRestUserAgent(),
-    Referer: `${origin}/`,
+    Referer: `${originRoot}/`,
+    Origin: originRoot,
+    "Accept-Language": "en-US,en;q=0.9",
+    /** Some Cloudflare rules expect browser-like fetch metadata (server-to-site API calls). */
+    "Sec-Fetch-Dest": "empty",
+    "Sec-Fetch-Mode": "cors",
+    "Sec-Fetch-Site": "cross-site",
   };
   const wafCookie = (process.env.WORDPRESS_WAF_BYPASS_COOKIE ?? "").trim();
   if (wafCookie) {
     h.Cookie = wafCookie;
+  }
+  const bypassHeaderName = (process.env.WORDPRESS_WAF_BYPASS_HEADER_NAME ?? "").trim();
+  const bypassHeaderValue = (process.env.WORDPRESS_WAF_BYPASS_HEADER_VALUE ?? "").trim();
+  if (bypassHeaderName && bypassHeaderValue) {
+    h[bypassHeaderName] = bypassHeaderValue;
   }
   if (opts?.contentTypeJson) {
     h["Content-Type"] = "application/json";
@@ -340,7 +399,7 @@ export async function uploadMedia(
 ): Promise<{ id: number; url: string }> {
   const base = (site.url ?? "").trim();
   const endpoint = wpRestUrl(base, "wp/v2/media");
-  const fallbackBase = getWwwFallbackBase(base);
+  const fallbackBase = (process.env.WORDPRESS_REST_BASE_URL ?? "").trim() ? null : getWwwFallbackBase(base);
   const fallbackEndpoint = fallbackBase ? wpRestUrl(fallbackBase, "wp/v2/media") : null;
 
   const fetchErr = (e: unknown): string => {
@@ -360,7 +419,7 @@ export async function uploadMedia(
     });
     if (!res.ok) {
       const errText = await res.text();
-      throw new Error(`WP uploadMedia (multipart) failed: ${res.status} ${errText}`);
+      throw new Error(`WP uploadMedia (multipart) failed: ${formatWordPressHttpError(res.status, errText)}`);
     }
     const data = await res.json();
     return { id: data.id, url: data.source_url };
@@ -379,7 +438,7 @@ export async function uploadMedia(
     });
     if (!res.ok) {
       const errText = await res.text();
-      throw new Error(`WP uploadMedia (raw) failed: ${res.status} ${errText}`);
+      throw new Error(`WP uploadMedia (raw) failed: ${formatWordPressHttpError(res.status, errText)}`);
     }
     const data = await res.json();
     return { id: data.id, url: data.source_url };

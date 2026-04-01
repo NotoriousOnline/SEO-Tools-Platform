@@ -69,6 +69,19 @@ MANDATORY RULES
 - Include this language in appropriate sections: "If you take prescription medications, speak with your pharmacist or physician before using CBD/cannabis products."
 - For mental health/sleep/pain risk contexts, include: "If you are experiencing a medical emergency, call 911 or go to your nearest emergency room."
 
+DR. ALEXANDER TABIBI ATTRIBUTION (mandatory where applicable)
+Positioning: Dr. Alexander Tabibi is a former physician and independent science writer who interrogates evidence critically. He is not a practising clinician. He does not advise patients.
+Where required: All health, dosage, pharmacological, and drug-interaction content. A missing or generic attribution on this content type is a BLOCKER - the article cannot go live.
+Correct formats (use naturally in prose):
+- "Dr. Alexander Tabibi, a former physician and independent science writer, notes that…"
+- "According to Dr. Alexander Tabibi…"
+- "As Dr. Tabibi explains…"
+Example in context: "Dr. Alexander Tabibi, a former physician and independent science writer, points to evidence suggesting that myrcene may contribute to sedative effects - though he notes individual responses vary significantly."
+Hard rules - never write:
+- Anything implying "in his clinical practice" or that he advises or recommends what patients should take or do as a treating doctor.
+- "Reviewed by a medical professional" or other generic attribution without his full name (Dr. Alexander Tabibi) where attribution is required.
+- Any language implying he is currently practising medicine or treating patients.
+
 DR. ALEX / EXPERT NOTE BOX (required for every placeholder)
 Each [DR. AUTHOR VOICE - ...] block must be wrapped in this HTML shell so it renders as a yellow cream quote-style callout (inline styles only; copy the structure exactly). Put the full placeholder text inside the inner italic paragraph only:
 
@@ -82,7 +95,7 @@ Placement (same as before):
 2) After each major mechanistic/evidence section
 3) Before conclusion
 
-Each inner paragraph must contain specific 2-sentence editorial direction for the clinician (not a summary of the AI draft above).
+Each inner paragraph must contain specific 2-sentence editorial direction for the expert editor (not a summary of the AI draft above), including Tabibi attribution direction when the adjacent section warrants it (per rules above).
 
 CITATIONS (strict — one paper, one PMID link)
 - Include at most 2 citations in the whole article. Use them only for the strongest mechanistic or clinical claims.
@@ -128,6 +141,7 @@ QUALITY SELF-CHECK BEFORE RETURN
 - Product CTA count is <= 1 and placement is correct.
 - FAQ quality constraints are met.
 - No disease-treatment claims.
+- No Dr. Tabibi name or attribution language in the main body; Tabibi rules appear only inside [DR. AUTHOR VOICE - ...] instructions where health/dosage/pharmacology/interactions are in scope.
 If any check fails, revise before returning output.`;
 }
 

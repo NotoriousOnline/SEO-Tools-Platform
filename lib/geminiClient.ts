@@ -94,6 +94,7 @@ const DELAY_MS = 3000;
 const MAX_IMAGE_ATTEMPTS = 8;
 const BASE_BACKOFF_MS = 3000;
 const MAX_BACKOFF_MS = 120_000;
+const MAX_POLICY_FALLBACKS = 1;
 
 async function delayIfNeeded(): Promise<void> {
   const now = Date.now();
@@ -137,6 +138,15 @@ function isRetryableImagenError(err: unknown): boolean {
   );
 }
 
+function buildPolicySafeFallbackPrompt(originalPrompt: string): string {
+  const cleaned = originalPrompt
+    // Remove common trigger words that often cause policy filtering.
+    .replace(/\b(cannabis|marijuana|weed|thc|delta-?9|vape|vaping|smoking|joint|dab|bong)\b/gi, "botanical")
+    .replace(/\s+/g, " ")
+    .trim();
+  return `${cleaned}. Keep it neutral and educational, non-explicit, no consumption, no smoke, no drug paraphernalia, no people, still photorealistic editorial style.`;
+}
+
 export async function generateImage(
   prompt: string
 ): Promise<{ base64: string; mimeType: string }> {
@@ -147,30 +157,47 @@ export async function generateImage(
 
   const genAI = new GoogleGenAI({ apiKey });
   let lastErr: unknown;
+  let activePrompt = prompt;
+  let policyFallbacksUsed = 0;
 
   for (let attempt = 0; attempt < MAX_IMAGE_ATTEMPTS; attempt++) {
     await delayIfNeeded();
     try {
       const result = await genAI.models.generateImages({
         model: "imagen-4.0-generate-001",
-        prompt,
-        config: { numberOfImages: 1 },
+        prompt: activePrompt,
+        config: {
+          numberOfImages: 1,
+          includeRaiReason: true,
+          // Imagen API only accepts BLOCK_LOW_AND_ABOVE for this field (400 otherwise).
+          safetyFilterLevel: SafetyFilterLevel.BLOCK_LOW_AND_ABOVE,
+          personGeneration: PersonGeneration.ALLOW_ADULT,
+        },
       });
 
-      const imageBytes = (result as { generatedImages?: { image?: { imageBytes?: string; mimeType?: string } }[] })
-        .generatedImages?.[0]?.image?.imageBytes;
-      if (!imageBytes) {
-        throw new Error("No image returned from Imagen");
+      const picked = pickImageFromResult(result);
+      if (picked) {
+        return picked;
       }
 
-      return {
-        base64: imageBytes,
-        mimeType:
-          (result as { generatedImages?: { image?: { mimeType?: string } }[] }).generatedImages?.[0]?.image?.mimeType ??
-          "image/png",
-      };
+      if (process.env.NODE_ENV === "development") {
+        console.warn("[geminiClient] Imagen returned no image bytes", {
+          count: result.generatedImages?.length ?? 0,
+          rai: result.generatedImages?.map((g) => g.raiFilteredReason) ?? [],
+        });
+      }
+
+      throw new Error(IMAGEN_NO_BYTES_TRANSIENT);
     } catch (err) {
       lastErr = err;
+      const msg = errorMessage(err);
+      const isPolicyFiltered = msg.startsWith("Imagen content policy:");
+      if (isPolicyFiltered && policyFallbacksUsed < MAX_POLICY_FALLBACKS) {
+        policyFallbacksUsed += 1;
+        activePrompt = buildPolicySafeFallbackPrompt(prompt);
+        console.warn("[geminiClient] Imagen filtered content; retrying with policy-safe fallback prompt");
+        continue;
+      }
       const retryable = isRetryableImagenError(err);
       const hasMore = attempt < MAX_IMAGE_ATTEMPTS - 1;
       if (!retryable || !hasMore) {
