@@ -14,7 +14,12 @@ export async function postGenerateImageSingle(request: Request) {
       );
     }
 
-    const { base64, mimeType } = await generateImage(prompt);
+    const landscapeHint =
+      "\n\nWide horizontal landscape (not square). Fill the frame edge-to-edge — no large empty sky or white bands above/below the subject.";
+    const { base64, mimeType } = await generateImage(
+      /\b(landscape|horizontal|16:9|2:1|fill the frame)\b/i.test(prompt) ? prompt : `${prompt.trim()}${landscapeHint}`,
+      { aspectRatio: "16:9" }
+    );
     return NextResponse.json({ base64, mimeType });
   } catch (err) {
     const msg = errorMessage(err);

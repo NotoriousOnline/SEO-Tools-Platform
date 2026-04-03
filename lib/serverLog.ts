@@ -45,7 +45,37 @@ export async function serverLog(input: {
   }
 }
 
+/**
+ * Human-readable error text for logging and API JSON responses.
+ * SDKs often throw plain objects (not Error), which would otherwise become "[object Object]".
+ */
 export function errorMessage(err: unknown): string {
-  if (err instanceof Error) return err.message;
+  if (err == null) return "Unknown error";
+  if (typeof err === "string") return err;
+  if (err instanceof Error) {
+    const base = err.message?.trim() || err.name || "Error";
+    if (err.cause !== undefined) {
+      const c = errorMessage(err.cause);
+      if (c && c !== "Unknown error") return `${base} (${c})`;
+    }
+    return base;
+  }
+  if (typeof err === "object") {
+    const o = err as Record<string, unknown>;
+    if (typeof o.message === "string" && o.message.length > 0) return o.message;
+    const nested = o.error;
+    if (typeof nested === "string" && nested.length > 0) return nested;
+    if (nested && typeof nested === "object") {
+      const e = nested as Record<string, unknown>;
+      if (typeof e.message === "string" && e.message.length > 0) return e.message;
+      if (typeof e.detail === "string") return e.detail;
+    }
+    try {
+      const s = JSON.stringify(err);
+      if (s && s !== "{}") return s.length > 2000 ? `${s.slice(0, 2000)}…` : s;
+    } catch {
+      /* circular or non-serializable */
+    }
+  }
   return String(err);
 }

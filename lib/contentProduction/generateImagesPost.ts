@@ -4,12 +4,13 @@ import { errorMessage, serverLog } from "@/lib/serverLog";
 import { generateImage, httpStatusForImageGenerationError } from "@/lib/geminiClient";
 import { WP_TOOL_SCOPE, type WPToolScope } from "@/lib/wpSites";
 
+/** Featured + in-content article images only (Shop Now product thumbnails are separate HTML). */
 const STYLE_GUIDELINE =
-  "Photorealistic, high quality, professional photography style. No text overlays, no logos, no watermarks.";
+  "Photorealistic, high quality, professional photography style. No text overlays, no logos, no watermarks. Wide horizontal landscape rectangle (approximately 16:9 or 2:1), not square. The scene must fill the frame edge-to-edge: no large empty bands of sky, flat white, or unused space above or below the subject — avoid letterboxed, poster, or tall compositions with blank margins; compose so the image reads as one clear rectangular photo.";
 
 const WEED_IMAGE_ADDENDUM = `
 
-Weed.com: Keep imagery editorial and brand-safe—legal-age, educational or lifestyle context; no explicit consumption, no targeting minors, no medical claims in visuals; avoid gratuitous imagery.`;
+Weed.com: Keep imagery editorial and brand-safe—legal-age, educational or lifestyle context; no explicit consumption, no targeting minors, no medical claims in visuals; avoid gratuitous imagery. Hero and section images: landscape rectangle, subject fills the frame (no empty vertical bands).`;
 
 type H2Section = { h2Index: number; heading: string; contextSnippet: string };
 
@@ -126,6 +127,7 @@ Return JSON shape:
 }
 
 Rules:
+- Featured and in-content images only (not product cards): wide landscape rectangle; fill the frame with subject and environment — no big empty vertical whitespace or letterboxing look.
 - Generate exactly ${inContentTarget} objects in inContent (not more, not fewer).
 - Each inContent.h2Index must be unique and must appear in the candidate list below.
 - Choose sections where a visual adds the most value (skip FAQ-style headings; they are not listed).
@@ -223,7 +225,7 @@ Target: 1 featured + ${inContentTarget} in-content images.`;
     const results: GeneratedImagePayload[] = [];
 
     for (const item of promptsToGenerate) {
-      const { base64, mimeType } = await generateImage(item.prompt);
+      const { base64, mimeType } = await generateImage(item.prompt, { aspectRatio: "16:9" });
       results.push({
         type: item.type,
         index: item.index,

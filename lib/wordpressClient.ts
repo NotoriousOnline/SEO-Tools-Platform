@@ -1,3 +1,5 @@
+import { wpFetch } from "@/lib/wpFetch";
+
 export type WPSite = {
   url: string;
   username: string;
@@ -93,8 +95,68 @@ function getWwwFallbackBase(base: string): string | null {
   }
 }
 
+/** If hostname is www.example.com, return https://example.com (same path). Useful when www has no DNS from server egress. */
+function getApexFromWwwBase(base: string): string | null {
+  try {
+    const rawBase = (base ?? "").trim();
+    const withProtocol = /^https?:\/\//i.test(rawBase) ? rawBase : `https://${rawBase}`;
+    const u = new URL(withProtocol);
+    if (!u.hostname.startsWith("www.")) return null;
+    u.hostname = u.hostname.slice(4);
+    if (!u.hostname) return null;
+    return `${u.origin}${u.pathname}`.replace(/\/$/, "");
+  } catch {
+    return null;
+  }
+}
+
+function dedupeRestBases(bases: string[]): string[] {
+  const seen = new Set<string>();
+  const out: string[] = [];
+  for (const b of bases) {
+    const key = b.trim().replace(/\/$/, "");
+    if (seen.has(key)) continue;
+    seen.add(key);
+    out.push(b.trim().replace(/\/$/, ""));
+  }
+  return out;
+}
+
+/**
+ * Hosts to try for media upload when Site URL alone fails.
+ * - If WORDPRESS_REST_BASE_URL is set, only the site URL is used (wpRestUrl applies the override).
+ * - If the site uses www., also try apex (strip www) — many sites only resolve apex from API hosts.
+ * - Optional www retry for apex-only URLs: WORDPRESS_REST_TRY_WWW_FALLBACK=true (default off).
+ *   Many domains have no www DNS record; automatic www retry caused ENOTFOUND on Vercel.
+ */
+function restBasesForMediaUpload(siteUrl: string): string[] {
+  const trimmed = (siteUrl ?? "").trim().replace(/\/$/, "");
+  const override = (process.env.WORDPRESS_REST_BASE_URL ?? "").trim();
+  if (override) {
+    return dedupeRestBases([trimmed]);
+  }
+  const bases: string[] = [trimmed];
+  const apex = getApexFromWwwBase(trimmed);
+  if (apex) bases.push(apex);
+  const tryWww = (process.env.WORDPRESS_REST_TRY_WWW_FALLBACK ?? "").trim().toLowerCase() === "true";
+  if (tryWww) {
+    const www = getWwwFallbackBase(trimmed);
+    if (www) bases.push(www);
+  }
+  return dedupeRestBases(bases);
+}
+
+/**
+ * WordPress shows application passwords with spaces; Basic auth must use the raw 24-character string with no spaces.
+ */
+export function normalizeApplicationPassword(appPassword: string): string {
+  return (appPassword ?? "").replace(/\s+/g, "").trim();
+}
+
 export function getAuthHeader(site: WPSite): string {
-  const creds = `${site.username.trim()}:${site.app_password.trim()}`;
+  const user = site.username.trim();
+  const pass = normalizeApplicationPassword(site.app_password);
+  const creds = `${user}:${pass}`;
   return `Basic ${Buffer.from(creds, "utf-8").toString("base64")}`;
 }
 
@@ -141,12 +203,17 @@ export async function getPosts(
   limit: number
 ): Promise<{ id: number; title: { rendered: string }; link: string; slug: string }[]> {
   const base = site.url.replace(/\/$/, "");
-  const res = await fetch(
+  const res = await wpFetch(
     wpRestUrl(base, `wp/v2/posts?per_page=${limit}&_fields=id,title,link,slug`),
     { headers: wpRestHeaders(site) }
   );
   if (!res.ok) throw new Error(`WP getPosts failed: ${res.status}`);
-  return res.json();
+  return (await res.json()) as {
+    id: number;
+    title: { rendered: string };
+    link: string;
+    slug: string;
+  }[];
 }
 
 export type WPPostsPageHeaders = {
@@ -166,7 +233,7 @@ export async function getPostsPageWithHeaders(
   perPage: number
 ): Promise<WPPostsPageHeaders> {
   const base = site.url.replace(/\/$/, "");
-  const res = await fetch(
+  const res = await wpFetch(
     wpRestUrl(base, `wp/v2/posts?per_page=${perPage}&page=${page}&_fields=id,title,link,slug,excerpt`),
     { headers: wpRestHeaders(site) }
   );
@@ -228,6 +295,8 @@ export type WCProductListItem = {
   slug: string;
   permalink: string;
   short_description?: string;
+  /** First gallery image is typical for catalog cards. */
+  images?: { id?: number; src?: string; alt?: string }[];
 };
 
 export type WCProductsPageHeaders = {
@@ -246,10 +315,10 @@ export async function getProductsPageWithHeaders(
   perPage: number
 ): Promise<WCProductsPageHeaders> {
   const base = site.url.replace(/\/$/, "");
-  const res = await fetch(
+  const res = await wpFetch(
     wpRestUrl(
       base,
-      `wc/v3/products?per_page=${perPage}&page=${page}&status=publish&_fields=id,name,slug,permalink,short_description`
+      `wc/v3/products?per_page=${perPage}&page=${page}&status=publish&_fields=id,name,slug,permalink,short_description,images`
     ),
     { headers: wpRestHeaders(site) }
   );
@@ -329,7 +398,7 @@ export async function createPost(
     body.tags = opts.tags.filter((x) => Number.isFinite(x) && x > 0);
   }
 
-  const res = await fetch(wpRestUrl(base, "wp/v2/posts?context=edit"), {
+  const res = await wpFetch(wpRestUrl(base, "wp/v2/posts?context=edit"), {
     method: "POST",
     headers: wpRestHeaders(site, { contentTypeJson: true }),
     body: JSON.stringify(body),
@@ -338,10 +407,60 @@ export async function createPost(
     const errText = await res.text();
     throw new Error(`WP createPost failed: ${res.status} ${errText}`);
   }
-  const data = await res.json();
+  const data = (await res.json()) as { id: number; link: string; status?: string };
   const status = data.status ?? "draft";
   if (status !== "draft") {
     console.warn(`[createPost] WordPress returned status "${status}" instead of "draft"`);
+  }
+  return {
+    id: data.id,
+    link: data.link,
+    editUrl: `${base}/wp-admin/post.php?post=${data.id}&action=edit`,
+    status,
+  };
+}
+
+/** Update an existing post and keep it as draft (same shape as createPost). */
+export async function updatePost(
+  site: WPSite,
+  postId: number,
+  title: string,
+  content: string,
+  featuredMediaId?: number,
+  opts?: { categories?: number[]; tags?: number[] }
+): Promise<{ id: number; link: string; editUrl: string; status: string }> {
+  if (!Number.isFinite(postId) || postId <= 0) {
+    throw new Error("updatePost: invalid postId");
+  }
+  const base = site.url.replace(/\/$/, "");
+  const body: Record<string, unknown> = {
+    title,
+    content,
+    status: "draft",
+  };
+  if (featuredMediaId != null && featuredMediaId > 0) {
+    body.featured_media = featuredMediaId;
+  }
+  if (Array.isArray(opts?.categories) && opts.categories.length > 0) {
+    body.categories = opts.categories.filter((x) => Number.isFinite(x) && x > 0);
+  }
+  if (Array.isArray(opts?.tags) && opts.tags.length > 0) {
+    body.tags = opts.tags.filter((x) => Number.isFinite(x) && x > 0);
+  }
+
+  const res = await wpFetch(wpRestUrl(base, `wp/v2/posts/${postId}?context=edit`), {
+    method: "POST",
+    headers: wpRestHeaders(site, { contentTypeJson: true }),
+    body: JSON.stringify(body),
+  });
+  if (!res.ok) {
+    const errText = await res.text();
+    throw new Error(`WP updatePost failed: ${res.status} ${errText}`);
+  }
+  const data = (await res.json()) as { id: number; link: string; status?: string };
+  const status = data.status ?? "draft";
+  if (status !== "draft") {
+    console.warn(`[updatePost] WordPress returned status "${status}" instead of "draft"`);
   }
   return {
     id: data.id,
@@ -356,7 +475,7 @@ export async function getCategoryIdByName(site: WPSite, categoryName: string): P
   const needle = categoryName.trim().toLowerCase();
   if (!needle) return null;
 
-  const res = await fetch(
+  const res = await wpFetch(
     wpRestUrl(
       base,
       `wp/v2/categories?per_page=100&search=${encodeURIComponent(categoryName)}&_fields=id,name,slug`
@@ -380,7 +499,7 @@ export async function getCategoryIdByName(site: WPSite, categoryName: string): P
 export async function setPostFeaturedMedia(site: WPSite, postId: number, mediaId: number): Promise<void> {
   if (!Number.isFinite(mediaId) || mediaId <= 0) return;
   const base = site.url.replace(/\/$/, "");
-  const res = await fetch(wpRestUrl(base, `wp/v2/posts/${postId}`), {
+  const res = await wpFetch(wpRestUrl(base, `wp/v2/posts/${postId}`), {
     method: "POST",
     headers: wpRestHeaders(site, { contentTypeJson: true }),
     body: JSON.stringify({ featured_media: mediaId }),
@@ -397,10 +516,7 @@ export async function uploadMedia(
   filename: string,
   mimeType: string
 ): Promise<{ id: number; url: string }> {
-  const base = (site.url ?? "").trim();
-  const endpoint = wpRestUrl(base, "wp/v2/media");
-  const fallbackBase = (process.env.WORDPRESS_REST_BASE_URL ?? "").trim() ? null : getWwwFallbackBase(base);
-  const fallbackEndpoint = fallbackBase ? wpRestUrl(fallbackBase, "wp/v2/media") : null;
+  const bases = restBasesForMediaUpload(site.url ?? "");
 
   const fetchErr = (e: unknown): string => {
     const msg = e instanceof Error ? e.message : String(e);
@@ -412,16 +528,16 @@ export async function uploadMedia(
     const formData = new FormData();
     const blob = new Blob([new Uint8Array(imageBuffer)], { type: mimeType });
     formData.append("file", blob, filename);
-    const res = await fetch(targetEndpoint, {
+    const res = await wpFetch(targetEndpoint, {
       method: "POST",
       headers: wpRestHeaders(site),
-      body: formData,
+      body: formData as never,
     });
     if (!res.ok) {
       const errText = await res.text();
       throw new Error(`WP uploadMedia (multipart) failed: ${formatWordPressHttpError(res.status, errText)}`);
     }
-    const data = await res.json();
+    const data = (await res.json()) as { id: number; source_url: string };
     return { id: data.id, url: data.source_url };
   };
 
@@ -431,47 +547,49 @@ export async function uploadMedia(
       "Content-Type": mimeType,
       "Content-Disposition": `attachment; filename="${filename.replace(/"/g, "")}"`,
     };
-    const res = await fetch(targetEndpoint, {
+    const res = await wpFetch(targetEndpoint, {
       method: "POST",
       headers,
-      body: new Uint8Array(imageBuffer),
+      body: new Uint8Array(imageBuffer) as never,
     });
     if (!res.ok) {
       const errText = await res.text();
       throw new Error(`WP uploadMedia (raw) failed: ${formatWordPressHttpError(res.status, errText)}`);
     }
-    const data = await res.json();
+    const data = (await res.json()) as { id: number; source_url: string };
     return { id: data.id, url: data.source_url };
   };
 
-  try {
-    return await tryMultipart(endpoint);
-  } catch (multipartErr) {
-    console.warn(`[uploadMedia] multipart failed; retrying raw binary. ${fetchErr(multipartErr)}`);
+  const tryOneBase = async (base: string): Promise<{ id: number; url: string }> => {
+    const endpoint = wpRestUrl(base, "wp/v2/media");
+    try {
+      return await tryMultipart(endpoint);
+    } catch (multipartErr) {
+      console.warn(`[uploadMedia] multipart failed for ${base}; retrying raw binary. ${fetchErr(multipartErr)}`);
+    }
+    return tryRawBinary(endpoint);
+  };
+
+  let lastErr: unknown;
+  for (let i = 0; i < bases.length; i++) {
+    const base = bases[i];
+    try {
+      return await tryOneBase(base);
+    } catch (e) {
+      lastErr = e;
+      const msg = fetchErr(e);
+      console.warn(`[uploadMedia] failed for base ${base} (${i + 1}/${bases.length}): ${msg}`);
+      if (i < bases.length - 1) continue;
+    }
   }
 
-  try {
-    return await tryRawBinary(endpoint);
-  } catch (rawErr) {
-    const rawMsg = fetchErr(rawErr);
-    const dnsFail = /enotfound/i.test(rawMsg);
-    if (dnsFail && fallbackEndpoint) {
-      console.warn(`[uploadMedia] DNS failed for ${base}; retrying with www host.`);
-      try {
-        return await tryMultipart(fallbackEndpoint);
-      } catch (w1) {
-        console.warn(`[uploadMedia] www multipart failed; retrying raw. ${fetchErr(w1)}`);
-      }
-      try {
-        return await tryRawBinary(fallbackEndpoint);
-      } catch (w2) {
-        throw new Error(
-          `WP uploadMedia failed on both hostnames (${base} and ${fallbackBase}): ${fetchErr(w2)}`
-        );
-      }
-    }
-    throw new Error(`WP uploadMedia failed (multipart + raw): ${rawMsg}`);
-  }
+  const hint =
+    /enotfound/i.test(fetchErr(lastErr)) && !(process.env.WORDPRESS_REST_BASE_URL ?? "").trim()
+      ? " DNS lookup failed from this server after system DNS and DoH fallback. Set WORDPRESS_REST_BASE_URL to a hostname that resolves from Vercel (often an API/origin host), or set WORDPRESS_DNS_DOH_FALLBACK=false only if DoH is blocked. Do not enable WORDPRESS_REST_TRY_WWW_FALLBACK unless www exists in DNS."
+      : "";
+  throw new Error(
+    `WP uploadMedia failed after trying ${bases.join(", ")} (multipart then raw per host): ${fetchErr(lastErr)}${hint}`
+  );
 }
 
 export async function updateMediaDetails(
@@ -486,7 +604,7 @@ export async function updateMediaDetails(
   if (fields.caption != null) body.caption = fields.caption;
   if (Object.keys(body).length === 0) return;
 
-  const res = await fetch(wpRestUrl(base, `wp/v2/media/${mediaId}`), {
+  const res = await wpFetch(wpRestUrl(base, `wp/v2/media/${mediaId}`), {
     method: "POST",
     headers: wpRestHeaders(site, { contentTypeJson: true }),
     body: JSON.stringify(body),
@@ -521,7 +639,7 @@ export async function updatePostYoastMeta(
   }
   if (Object.keys(meta).length === 0) return true;
 
-  const res = await fetch(wpRestUrl(base, `wp/v2/posts/${postId}`), {
+  const res = await wpFetch(wpRestUrl(base, `wp/v2/posts/${postId}`), {
     method: "POST",
     headers: wpRestHeaders(site, { contentTypeJson: true }),
     body: JSON.stringify({ meta }),
@@ -570,7 +688,7 @@ export async function updatePostRankMathMeta(
   ];
 
   for (let i = 0; i < payloads.length; i++) {
-    const res = await fetch(wpRestUrl(base, `wp/v2/posts/${postId}`), {
+    const res = await wpFetch(wpRestUrl(base, `wp/v2/posts/${postId}`), {
       method: "POST",
       headers: wpRestHeaders(site, { contentTypeJson: true }),
       body: JSON.stringify(payloads[i]),

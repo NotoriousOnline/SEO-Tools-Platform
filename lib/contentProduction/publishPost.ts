@@ -5,6 +5,7 @@ import {
   createPost,
   getCategoryIdByName,
   setPostFeaturedMedia,
+  updatePost,
   uploadMedia,
   updateMediaDetails,
   updatePostRankMathMeta,
@@ -64,6 +65,19 @@ function escapeHtmlAttr(s: string): string {
   return s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
 }
 
+/**
+ * Featured + in-content article images only. Inline styles override themes that force square crops.
+ * Shop Now product thumbnails stay square in generated HTML (generateContentPost) — do not use this helper there.
+ */
+const EDITORIAL_FIGURE_STYLE =
+  "margin:1.75rem auto;max-width:100%;width:100%;box-sizing:border-box;";
+const EDITORIAL_IMG_STYLE =
+  "width:100%;max-width:100%;height:auto;display:block;border-radius:0.375rem;";
+
+function editorialArticleFigureHtml(imageUrl: string, alt: string): string {
+  return `<figure class="wp-block-image weed-learn-editorial-image" style="${EDITORIAL_FIGURE_STYLE}"><img src="${escapeHtmlAttr(imageUrl)}" alt="${escapeHtmlAttr(alt)}" style="${EDITORIAL_IMG_STYLE}" width="1200" height="675" loading="lazy" decoding="async" /></figure>`;
+}
+
 /** Featured image at top of body HTML (in addition to WordPress featured_media). */
 function prependFeaturedImageToBody(html: string, imageUrl: string, alt: string): string {
   const trimmed = html.trimStart();
@@ -71,8 +85,7 @@ function prependFeaturedImageToBody(html: string, imageUrl: string, alt: string)
   if (/^<figure/i.test(trimmed) && head.includes(imageUrl)) {
     return html;
   }
-  const figure = `<figure class="wp-block-image"><img src="${escapeHtmlAttr(imageUrl)}" alt="${escapeHtmlAttr(alt)}" /></figure>\n\n`;
-  return figure + trimmed;
+  return `${editorialArticleFigureHtml(imageUrl, alt)}\n\n${trimmed}`;
 }
 
 type InContentPlacement = { url: string; alt: string; h2Index: number; order: number };
@@ -84,7 +97,7 @@ function injectInContentImages(html: string, placements: InContentPlacement[]): 
   for (const p of placements) {
     const pos = findH2EndPositionByIndex(html, p.h2Index);
     if (pos == null) continue;
-    const imgHtml = `<figure class="wp-block-image"><img src="${escapeHtmlAttr(p.url)}" alt="${escapeHtmlAttr(p.alt)}" /></figure>`;
+    const imgHtml = editorialArticleFigureHtml(p.url, p.alt);
     insertions.push({ pos, order: p.order, html: imgHtml });
   }
 
@@ -178,6 +191,8 @@ export async function postPublish(request: Request, toolScope: WPToolScope) {
       images?: unknown;
       referenceUrl?: unknown;
       keywords?: unknown;
+      /** When set, updates this draft instead of creating a new post. */
+      postId?: unknown;
     };
     try {
       body = JSON.parse(raw) as typeof body;
@@ -186,6 +201,12 @@ export async function postPublish(request: Request, toolScope: WPToolScope) {
     }
 
     const { siteId, title, content, images, referenceUrl, keywords } = body;
+    const existingPostId =
+      typeof body.postId === "number" && Number.isFinite(body.postId) && body.postId > 0
+        ? Math.floor(body.postId)
+        : typeof body.postId === "string" && /^\d+$/.test(body.postId.trim())
+          ? parseInt(body.postId.trim(), 10)
+          : undefined;
 
     if (!siteId || !title || !content || !Array.isArray(images)) {
       return NextResponse.json(
@@ -291,13 +312,10 @@ export async function postPublish(request: Request, toolScope: WPToolScope) {
       }
       taxonomyOpts.tags = [4337];
     }
-    const { id: postId, link, editUrl, status } = await createPost(
-      site,
-      title,
-      finalContent,
-      undefined,
-      taxonomyOpts
-    );
+    const { id: postId, link, editUrl, status } =
+      existingPostId != null
+        ? await updatePost(site, existingPostId, title, finalContent, undefined, taxonomyOpts)
+        : await createPost(site, title, finalContent, undefined, taxonomyOpts);
     if (featuredMediaId != null && featuredMediaId > 0) {
       await setPostFeaturedMedia(site, postId, featuredMediaId);
     }
@@ -311,7 +329,9 @@ export async function postPublish(request: Request, toolScope: WPToolScope) {
     });
 
     if (status !== "draft") {
-      console.warn(`[publish] WordPress created post with status "${status}" (expected "draft")`);
+      console.warn(
+        `[publish] WordPress ${existingPostId != null ? "updated" : "created"} post with status "${status}" (expected "draft")`
+      );
     }
 
     return NextResponse.json({
@@ -319,6 +339,7 @@ export async function postPublish(request: Request, toolScope: WPToolScope) {
       postUrl: link,
       editUrl,
       status,
+      updated: existingPostId != null,
       site: { name: site.name, url: site.url },
       rankMath: { metaDescriptionSet: rankMathOk, focusKeyphrase: focuskw },
     });

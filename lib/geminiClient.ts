@@ -5,6 +5,10 @@ import { errorMessage } from "@/lib/serverLog";
 export const IMAGE_GENERATION_OVERLOAD_USER_MESSAGE =
   "Image generation is temporarily overloaded. Wait a minute and try again, or generate fewer images at once.";
 
+/** Daily / billing quota hit — retries will not help until the quota resets or the plan changes. */
+export const IMAGE_GENERATION_QUOTA_EXCEEDED_USER_MESSAGE =
+  "Google Imagen daily quota is used up (or billing limits apply). Wait until tomorrow, reduce how many images you generate at once, or raise limits in Google AI Studio / Google Cloud billing for this API key.";
+
 /** HTTP 200 but no image bytes after retries (transient or prompt/model issue). */
 export const IMAGE_GENERATION_EMPTY_USER_MESSAGE =
   "Image generation did not return image data. Wait a moment and try again, or simplify the image prompt.";
@@ -47,8 +51,21 @@ function geminiHttpStatus(err: unknown): number | undefined {
   return undefined;
 }
 
+/** Daily or per-model quota (not the same as short-lived rate limits that sometimes recover on retry). */
+function isDailyQuotaExceededError(err: unknown): boolean {
+  const raw = errorMessage(err);
+  const m = raw.toLowerCase();
+  if (m.includes("exceeded your current quota")) return true;
+  if (m.includes("check your plan and billing")) return true;
+  if (m.includes("predict_requests_per_model_per_day") || m.includes("requests_per_model_per_day")) return true;
+  if (m.includes("quota metric") && m.includes("limit")) return true;
+  if (m.includes("resource_exhausted") && m.includes("quota")) return true;
+  return false;
+}
+
 /** JSON body on ApiError.message (Google GenAI SDK stringifies errors). */
 function parseOverloadedFromApiErrorMessage(err: unknown): boolean {
+  if (isDailyQuotaExceededError(err)) return false;
   const msg = errorMessage(err);
   try {
     const parsed = JSON.parse(msg) as unknown;
@@ -57,9 +74,10 @@ function parseOverloadedFromApiErrorMessage(err: unknown): boolean {
       const inner = o.error;
       if (inner && typeof inner === "object") {
         const t = (inner as { type?: string }).type;
-        const m = String((inner as { message?: string }).message ?? "").toLowerCase();
+        const im = String((inner as { message?: string }).message ?? "").toLowerCase();
+        if (im.includes("quota") && im.includes("exceeded")) return false;
         if (t === "overloaded_error" || t === "RESOURCE_EXHAUSTED") return true;
-        if (m.includes("overloaded") || m.includes("resource exhausted")) return true;
+        if (im.includes("overloaded") || im.includes("resource exhausted")) return true;
       }
     }
   } catch {
@@ -71,6 +89,8 @@ function parseOverloadedFromApiErrorMessage(err: unknown): boolean {
 /** True when the route should return 503 (retry later) rather than 500. */
 export function isImageGenerationOverloadExhausted(err: unknown): boolean {
   if (errorMessage(err) === IMAGE_GENERATION_OVERLOAD_USER_MESSAGE) return true;
+  if (errorMessage(err) === IMAGE_GENERATION_QUOTA_EXCEEDED_USER_MESSAGE) return false;
+  if (isDailyQuotaExceededError(err)) return false;
   const status = geminiHttpStatus(err);
   if (status === 429 || status === 503 || status === 529) return true;
   if (parseOverloadedFromApiErrorMessage(err)) return true;
@@ -83,6 +103,8 @@ export function httpStatusForImageGenerationError(err: unknown): number {
   const msg = errorMessage(err);
   if (msg.startsWith("Imagen content policy:")) return 422;
   if (msg === IMAGE_GENERATION_EMPTY_USER_MESSAGE) return 503;
+  if (msg === IMAGE_GENERATION_QUOTA_EXCEEDED_USER_MESSAGE) return 429;
+  if (isDailyQuotaExceededError(err)) return 429;
   if (isImageGenerationOverloadExhausted(err)) return 503;
   return 500;
 }
@@ -116,7 +138,8 @@ function backoffMs(attemptIndex: number): number {
 }
 
 function isRetryableImagenError(err: unknown): boolean {
-  const msg = err instanceof Error ? err.message : String(err);
+  if (isDailyQuotaExceededError(err)) return false;
+  const msg = errorMessage(err);
   if (msg === IMAGEN_NO_BYTES_TRANSIENT) return true;
   const byStatus = geminiHttpStatus(err);
   if (byStatus !== undefined && (byStatus === 429 || byStatus === 500 || byStatus === 502 || byStatus === 503 || byStatus === 529)) {
@@ -147,8 +170,14 @@ function buildPolicySafeFallbackPrompt(originalPrompt: string): string {
   return `${cleaned}. Keep it neutral and educational, non-explicit, no consumption, no smoke, no drug paraphernalia, no people, still photorealistic editorial style.`;
 }
 
+export type GenerateImageOptions = {
+  /** Imagen supported: "1:1", "3:4", "4:3", "9:16", "16:9". Editorial/blog images use landscape. */
+  aspectRatio?: string;
+};
+
 export async function generateImage(
-  prompt: string
+  prompt: string,
+  options?: GenerateImageOptions
 ): Promise<{ base64: string; mimeType: string }> {
   const apiKey = process.env.GEMINI_API_KEY;
   if (!apiKey) {
@@ -169,6 +198,8 @@ export async function generateImage(
         config: {
           numberOfImages: 1,
           includeRaiReason: true,
+          // Default 16:9 so featured and in-content images are rectangular (not 1:1).
+          aspectRatio: options?.aspectRatio ?? "16:9",
           // Imagen API only accepts BLOCK_LOW_AND_ABOVE for this field (400 otherwise).
           safetyFilterLevel: SafetyFilterLevel.BLOCK_LOW_AND_ABOVE,
           personGeneration: PersonGeneration.ALLOW_ADULT,
@@ -191,6 +222,10 @@ export async function generateImage(
     } catch (err) {
       lastErr = err;
       const msg = errorMessage(err);
+      if (isDailyQuotaExceededError(err)) {
+        console.warn("[geminiClient] Imagen quota or billing limit reached — not retrying.");
+        break;
+      }
       const isPolicyFiltered = msg.startsWith("Imagen content policy:");
       if (isPolicyFiltered && policyFallbacksUsed < MAX_POLICY_FALLBACKS) {
         policyFallbacksUsed += 1;
@@ -212,6 +247,9 @@ export async function generateImage(
     }
   }
 
+  if (lastErr != null && isDailyQuotaExceededError(lastErr)) {
+    throw new Error(IMAGE_GENERATION_QUOTA_EXCEEDED_USER_MESSAGE, { cause: lastErr });
+  }
   if (lastErr instanceof Error) {
     if (lastErr.message === IMAGEN_NO_BYTES_TRANSIENT) {
       throw new Error(IMAGE_GENERATION_EMPTY_USER_MESSAGE, { cause: lastErr });

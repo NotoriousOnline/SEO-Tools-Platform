@@ -160,5 +160,6 @@ export async function callClaude(
     }
     throw lastErr;
   }
-  throw lastErr;
+  // SDK may reject with a plain object; normalize so callers get a real message and stack.
+  throw new Error(errorMessage(lastErr), { cause: lastErr });
 }

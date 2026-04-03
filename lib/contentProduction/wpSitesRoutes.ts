@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { describeFetchError, explainSupabaseReachabilityError } from "@/lib/serverFetch";
 import { errorMessage, serverLog } from "@/lib/serverLog";
 import { wpRestHeaders, wpRestUrl } from "@/lib/wordpressClient";
+import { wpFetch } from "@/lib/wpFetch";
 import { createSite, getSites, type CreateSiteData, type WPToolScope } from "@/lib/wpSites";
 
 const MASKED_PASSWORD = "••••••••";
@@ -17,11 +18,24 @@ async function testWordPressConnection(
 ): Promise<{ ok: boolean; detail?: string }> {
   const base = url.replace(/\/$/, "");
   try {
-    const res = await fetch(wpRestUrl(base, "wp/v2/users/me"), {
+    const res = await wpFetch(wpRestUrl(base, "wp/v2/users/me"), {
       headers: wpRestHeaders({ url, username, app_password }),
     });
+    const text = await res.text();
     if (!res.ok) {
-      return { ok: false, detail: `HTTP ${res.status}` };
+      let detail = `HTTP ${res.status}`;
+      try {
+        const j = JSON.parse(text) as { code?: string; message?: string };
+        if (typeof j?.message === "string" && j.message.length > 0) {
+          detail = `HTTP ${res.status}: ${j.message}`;
+        } else if (typeof j?.code === "string") {
+          detail = `HTTP ${res.status}: ${j.code}`;
+        }
+      } catch {
+        const t = text.trim();
+        if (t.length > 0) detail = `HTTP ${res.status} ${t.slice(0, 280)}`;
+      }
+      return { ok: false, detail };
     }
     return { ok: true };
   } catch (err) {
@@ -69,9 +83,17 @@ export async function handleSitesPOST(request: Request, scope: WPToolScope) {
         /403/i.test(conn.detail ?? "")
           ? " HTTP 403 is often Cloudflare, Wordfence, or another WAF blocking your app server’s IP or “bot” requests—allowlist the server (e.g. Vercel egress IPs) or add a WAF rule to allow /wp-json/ for authenticated requests."
           : "";
+      const detailLower = (conn.detail ?? "").toLowerCase();
+      const invalidAppPass =
+        detailLower.includes("invalid application password") || detailLower.includes("invalid_application_password");
+      const authHint401 = invalidAppPass
+        ? " WordPress is rejecting the username + app password pair. The username must be your account login (the “Username” field on Users → Profile, or the Username column in Users → All Users)—not your display name at the top of the profile (e.g. “First Last” with a space is never the login). Application passwords only work with the user they were created for; copy the login exactly, often lowercase with no spaces."
+        : /401/i.test(conn.detail ?? "")
+          ? " For HTTP 401: use the WordPress login username (not display name unless they match), and an Application Password from Users → Profile (not your normal login password). Paste the app password with or without spaces. If it still fails, revoke the app password and create a new one, and confirm the user role can use the REST API (Administrator/Editor; some security plugins block REST for other roles)."
+          : "";
       return NextResponse.json(
         {
-          error: `Could not connect to WordPress${hint}.${wafHint} Use https:// in the site URL and verify the application password.`,
+          error: `Could not connect to WordPress${hint}.${wafHint}${authHint401} Use https:// in the site URL (no trailing path after the domain unless your site lives in a subdirectory).`,
         },
         { status: 400 }
       );

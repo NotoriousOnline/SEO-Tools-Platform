@@ -1,5 +1,5 @@
 import { getSupabaseAdmin } from "@/lib/supabase";
-import type { WPSite } from "@/lib/wordpressClient";
+import { normalizeApplicationPassword, type WPSite } from "@/lib/wordpressClient";
 
 /** Which content tool owns this row (separate site lists per product). */
 export type WPToolScope = "content-production" | "weed-com-content-production";
@@ -103,11 +103,12 @@ export type CreateSiteData = {
 
 export async function createSite(data: CreateSiteData, toolScope: WPToolScope): Promise<WPSiteRow> {
   const supabase = getSupabaseAdmin();
+  const app_password = normalizeApplicationPassword(data.app_password);
   const withScope = {
     name: data.name,
     url: data.url,
     username: data.username,
-    app_password: data.app_password,
+    app_password,
     tone_prompt: data.tone_prompt ?? "Write in a clear, authoritative, and engaging editorial tone.",
     tool_scope: toolScope,
   };
@@ -115,7 +116,7 @@ export async function createSite(data: CreateSiteData, toolScope: WPToolScope): 
     name: data.name,
     url: data.url,
     username: data.username,
-    app_password: data.app_password,
+    app_password,
     tone_prompt: data.tone_prompt ?? "Write in a clear, authoritative, and engaging editorial tone.",
   };
 
@@ -181,7 +182,11 @@ async function runUpdateOrDelete(
 }
 
 export async function updateSite(id: string, data: UpdateSiteData, toolScope?: WPToolScope): Promise<void> {
-  await runUpdateOrDelete("update", id, data, toolScope);
+  const payload: UpdateSiteData = { ...data };
+  if (payload.app_password != null) {
+    payload.app_password = normalizeApplicationPassword(payload.app_password);
+  }
+  await runUpdateOrDelete("update", id, payload, toolScope);
 }
 
 export async function deleteSite(id: string, toolScope?: WPToolScope): Promise<void> {

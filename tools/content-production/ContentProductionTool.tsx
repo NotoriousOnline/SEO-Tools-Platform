@@ -106,10 +106,17 @@ export function ContentProductionTool({
     site: { name: string; url: string };
     rankMath?: { focusKeyphrase?: string; metaDescriptionSet?: boolean };
     yoast?: { focusKeyphrase?: string; metaDescriptionSet?: boolean };
+    /** True when the last operation was an update to an existing draft, not a new post. */
+    updated?: boolean;
   } | null>(null);
   const [regeneratingIndex, setRegeneratingIndex] = useState<number | null>(null);
+  const [regeneratePanelIndex, setRegeneratePanelIndex] = useState<number | null>(null);
+  const [regenerateExtraNotes, setRegenerateExtraNotes] = useState("");
+  const [regenerateError, setRegenerateError] = useState<{ index: number; message: string } | null>(null);
   const [imagesError, setImagesError] = useState<string | null>(null);
   const contentEditableRef = useRef<HTMLDivElement>(null);
+  const publishCancelledRef = useRef(false);
+  const publishAbortRef = useRef<AbortController | null>(null);
 
   const siteUnlocked = !!selectedSite;
   const contentWordCount = approvedContent
@@ -135,6 +142,10 @@ export function ContentProductionTool({
   useEffect(() => {
     fetchSites();
   }, []);
+
+  useEffect(() => {
+    setRegenerateExtraNotes("");
+  }, [regeneratePanelIndex]);
 
   const fetchArticleSheetRows = useCallback(async () => {
     if (!articleSheetFromGoogle) return;
@@ -386,6 +397,210 @@ export function ContentProductionTool({
     }
   };
 
+  const cancelDraftPublishing = useCallback(() => {
+    publishCancelledRef.current = true;
+    publishAbortRef.current?.abort();
+  }, []);
+
+  const runDraftToWordPress = useCallback(
+    async (contentHtml: string, images: ImageItem[], existingPostId?: number) => {
+      if (!selectedSite || !title.trim() || !contentHtml) return;
+
+      publishCancelledRef.current = false;
+      publishAbortRef.current?.abort();
+      publishAbortRef.current = new AbortController();
+      const signal = publishAbortRef.current.signal;
+
+      setPublishing(true);
+      setPublishError(null);
+      if (existingPostId == null) {
+        setPublishResult(null);
+      }
+
+      const wafHint =
+        " If this works locally but not on Vercel, the site’s firewall (e.g. Cloudflare) may be blocking /wp-json from Vercel. Your team can allowlist the app — see WORDPRESS_WAF_* env vars in .env.example.";
+
+      const parseApiError = (res: Response, text: string): string => {
+        let data: Record<string, unknown> = {};
+        try {
+          if (text) data = JSON.parse(text) as Record<string, unknown>;
+        } catch {
+          return res.status === 413
+            ? "Request too large for the server (Vercel payload limit). Try a smaller image or fewer images."
+            : (text || "").slice(0, 500) || `Server returned HTTP ${res.status}`;
+        }
+        let msg = typeof data.error === "string" ? data.error : `Request failed (HTTP ${res.status})`;
+        if (res.status === 413) {
+          msg =
+            typeof data.error === "string"
+              ? data.error
+              : "Payload too large for Vercel. Try a smaller image or regenerate with lower resolution.";
+        }
+        if (res.status === 403 || /403/.test(msg) || /cloudflare|blocked|forbidden/i.test(msg)) {
+          msg += wafHint;
+        }
+        return msg;
+      };
+
+      try {
+        if (publishCancelledRef.current) return;
+
+        const included = images.filter((i) => i.included);
+        const titleTrim = title.trim();
+
+        const uploadedRefs: Array<{
+          type: "featured" | "in-content";
+          index: number;
+          mediaId: number;
+          url: string;
+          altText?: string;
+          fileSlug?: string;
+          h2Index?: number;
+        }> = [];
+
+        for (let i = 0; i < included.length; i++) {
+          if (publishCancelledRef.current) return;
+          const img = included[i];
+          setPublishStep(`Uploading image ${i + 1} of ${included.length} to WordPress…`);
+          const upRes = await fetch(`${api}/publish/upload-image`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            signal,
+            body: JSON.stringify({
+              siteId: selectedSite.id,
+              type: img.type,
+              index: img.index,
+              base64: img.base64,
+              mimeType: img.mimeType,
+              altText: img.altText,
+              fileSlug: img.fileSlug,
+              title: titleTrim,
+            }),
+          });
+          const upText = await upRes.text();
+          if (!upRes.ok) {
+            setPublishError(parseApiError(upRes, upText));
+            if (!isUpdate) setPublishResult(null);
+            return;
+          }
+          let upData: Record<string, unknown> = {};
+          try {
+            if (upText) upData = JSON.parse(upText) as Record<string, unknown>;
+          } catch {
+            setPublishError("Invalid response while uploading an image");
+            if (!isUpdate) setPublishResult(null);
+            return;
+          }
+          const id = upData.id as number;
+          const url = upData.url as string;
+          if (typeof id !== "number" || typeof url !== "string") {
+            setPublishError("WordPress did not return media id/url for an image");
+            if (!isUpdate) setPublishResult(null);
+            return;
+          }
+          uploadedRefs.push({
+            type: img.type,
+            index: img.index,
+            mediaId: id,
+            url,
+            altText: img.altText,
+            fileSlug: img.fileSlug,
+            h2Index: img.h2Index,
+          });
+        }
+
+        if (publishCancelledRef.current) return;
+
+        setPublishStep(existingPostId != null ? "Updating draft post…" : "Creating draft post…");
+        const res = await fetch(`${api}/publish`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          signal,
+          body: JSON.stringify({
+            siteId: selectedSite.id,
+            title: titleTrim,
+            content: contentHtml,
+            images: uploadedRefs,
+            ...(existingPostId != null ? { postId: existingPostId } : {}),
+            referenceUrl: showReferenceUrl ? referenceUrl.trim() || undefined : undefined,
+            keywords,
+          }),
+        });
+        const text = await res.text();
+
+        let data: Record<string, unknown> = {};
+        try {
+          if (text) data = JSON.parse(text) as Record<string, unknown>;
+        } catch {
+          setPublishError(
+            res.status === 413
+              ? "Draft step payload too large (unusual). Try shortening the article HTML."
+              : (text || "").slice(0, 500) || `Server returned HTTP ${res.status}`
+          );
+          if (!isUpdate) setPublishResult(null);
+          return;
+        }
+
+        if (!res.ok) {
+          let msg = typeof data.error === "string" ? data.error : `Publish failed (HTTP ${res.status})`;
+          if (res.status === 403 || /403/.test(msg) || /cloudflare|blocked|forbidden/i.test(msg)) {
+            msg += wafHint;
+          }
+          setPublishError(msg);
+          if (!isUpdate) setPublishResult(null);
+          return;
+        }
+
+        setPublishError(null);
+        setPublishResult({
+          postId: data.postId as number,
+          postUrl: data.postUrl as string,
+          editUrl: data.editUrl as string,
+          site: (data.site as { name: string; url: string }) ?? { name: selectedSite.name, url: selectedSite.url },
+          rankMath: data.rankMath as { focusKeyphrase?: string; metaDescriptionSet?: boolean } | undefined,
+          yoast: data.yoast as { focusKeyphrase?: string; metaDescriptionSet?: boolean } | undefined,
+          updated: data.updated === true,
+        });
+      } catch (err) {
+        if (err instanceof Error && err.name === "AbortError") {
+          setPublishError(null);
+          return;
+        }
+        if (existingPostId == null) setPublishResult(null);
+        setPublishError(err instanceof Error ? err.message : String(err));
+        console.error(err);
+      } finally {
+        setPublishing(false);
+        setPublishStep(null);
+        publishAbortRef.current = null;
+      }
+    },
+    [selectedSite, title, referenceUrl, keywords, api, showReferenceUrl]
+  );
+
+  const handlePublish = useCallback(() => {
+    if (!approvedContent || !generatedImages) return;
+    void runDraftToWordPress(approvedContent, generatedImages);
+  }, [approvedContent, generatedImages, runDraftToWordPress]);
+
+  const handleRepublishDraft = useCallback(() => {
+    if (!publishResult?.postId || !generatedImages || publishing) return;
+    const html =
+      contentEditableRef.current?.innerHTML?.trim() ||
+      approvedContent ||
+      generatedContent ||
+      "";
+    if (!html.trim()) return;
+    void runDraftToWordPress(html, generatedImages, publishResult.postId);
+  }, [
+    publishResult?.postId,
+    generatedImages,
+    publishing,
+    approvedContent,
+    generatedContent,
+    runDraftToWordPress,
+  ]);
+
   const handleGenerate = async () => {
     if (!selectedSite || !title.trim() || keywords.length === 0) return;
     setGenerating(true);
@@ -446,32 +661,31 @@ export function ContentProductionTool({
       setGenerating(false);
       if (imagesRes.ok && Array.isArray(imagesData)) {
         setImagesError(null);
-        setGeneratedImages(
-          imagesData.map(
-            (img: {
-              type?: string;
-              index?: number;
-              prompt?: string;
-              base64?: string;
-              mimeType?: string;
-              altText?: string;
-              fileSlug?: string;
-              h2Index?: number;
-              sectionHeading?: string;
-            }) => ({
-              type: img.type === "featured" ? "featured" : "in-content",
-              index: img.index ?? 0,
-              prompt: img.prompt ?? "",
-              base64: img.base64 ?? "",
-              mimeType: img.mimeType ?? "image/png",
-              included: true,
-              altText: typeof img.altText === "string" ? img.altText : undefined,
-              fileSlug: typeof img.fileSlug === "string" ? img.fileSlug : undefined,
-              h2Index: typeof img.h2Index === "number" ? img.h2Index : undefined,
-              sectionHeading: typeof img.sectionHeading === "string" ? img.sectionHeading : undefined,
-            })
-          )
+        const mapped: ImageItem[] = imagesData.map(
+          (img: {
+            type?: string;
+            index?: number;
+            prompt?: string;
+            base64?: string;
+            mimeType?: string;
+            altText?: string;
+            fileSlug?: string;
+            h2Index?: number;
+            sectionHeading?: string;
+          }) => ({
+            type: img.type === "featured" ? "featured" : "in-content",
+            index: img.index ?? 0,
+            prompt: img.prompt ?? "",
+            base64: img.base64 ?? "",
+            mimeType: img.mimeType ?? "image/png",
+            included: true,
+            altText: typeof img.altText === "string" ? img.altText : undefined,
+            fileSlug: typeof img.fileSlug === "string" ? img.fileSlug : undefined,
+            h2Index: typeof img.h2Index === "number" ? img.h2Index : undefined,
+            sectionHeading: typeof img.sectionHeading === "string" ? img.sectionHeading : undefined,
+          })
         );
+        setGeneratedImages(mapped);
       } else {
         setImagesError(imagesData?.error ?? "Image generation failed. You can retry below.");
       }
@@ -502,32 +716,32 @@ export function ContentProductionTool({
       const imagesData = await imagesRes.json();
       setImagesLoading(false);
       if (imagesRes.ok && Array.isArray(imagesData)) {
-        setGeneratedImages(
-          imagesData.map(
-            (img: {
-              type?: string;
-              index?: number;
-              prompt?: string;
-              base64?: string;
-              mimeType?: string;
-              altText?: string;
-              fileSlug?: string;
-              h2Index?: number;
-              sectionHeading?: string;
-            }) => ({
-              type: img.type === "featured" ? "featured" : "in-content",
-              index: img.index ?? 0,
-              prompt: img.prompt ?? "",
-              base64: img.base64 ?? "",
-              mimeType: img.mimeType ?? "image/png",
-              included: true,
-              altText: typeof img.altText === "string" ? img.altText : undefined,
-              fileSlug: typeof img.fileSlug === "string" ? img.fileSlug : undefined,
-              h2Index: typeof img.h2Index === "number" ? img.h2Index : undefined,
-              sectionHeading: typeof img.sectionHeading === "string" ? img.sectionHeading : undefined,
-            })
-          )
+        const mapped: ImageItem[] = imagesData.map(
+          (img: {
+            type?: string;
+            index?: number;
+            prompt?: string;
+            base64?: string;
+            mimeType?: string;
+            altText?: string;
+            fileSlug?: string;
+            h2Index?: number;
+            sectionHeading?: string;
+          }) => ({
+            type: img.type === "featured" ? "featured" : "in-content",
+            index: img.index ?? 0,
+            prompt: img.prompt ?? "",
+            base64: img.base64 ?? "",
+            mimeType: img.mimeType ?? "image/png",
+            included: true,
+            altText: typeof img.altText === "string" ? img.altText : undefined,
+            fileSlug: typeof img.fileSlug === "string" ? img.fileSlug : undefined,
+            h2Index: typeof img.h2Index === "number" ? img.h2Index : undefined,
+            sectionHeading: typeof img.sectionHeading === "string" ? img.sectionHeading : undefined,
+          })
         );
+        setGeneratedImages(mapped);
+        setImagesApproved(false);
       } else {
         setImagesError(imagesData?.error ?? "Image generation failed. Try again.");
       }
@@ -540,7 +754,7 @@ export function ContentProductionTool({
   const section2Unlocked = contentLoading || !!generatedContent;
   const hasContent = !!generatedContent || !!contentApproved;
   const section3Unlocked = hasContent;
-  const section4Unlocked = contentApproved && imagesApproved;
+  const section4Unlocked = (contentApproved && imagesApproved) || publishing;
   const includedImagesCount =
     generatedImages?.filter((i) => i.included).length ?? 0;
 
@@ -565,28 +779,56 @@ export function ContentProductionTool({
     setImagesApproved(true);
   }, []);
 
-  const handleRegenerateImage = useCallback(async (idx: number) => {
-    const img = generatedImages?.[idx];
-    if (!img?.prompt) return;
-    try {
-      const res = await fetch(`${api}/generate-images/single`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ prompt: img.prompt }),
-      });
-      const data = await res.json();
-      if (res.ok && data.base64) {
-        setGeneratedImages((prev) => {
-          if (!prev) return prev;
-          const next = [...prev];
-          next[idx] = { ...next[idx], base64: data.base64, mimeType: data.mimeType ?? "image/png" };
-          return next;
+  const handleRegenerateImage = useCallback(
+    async (idx: number, extraNotes?: string) => {
+      const img = generatedImages?.[idx];
+      if (!img?.prompt) return;
+      setRegeneratingIndex(idx);
+      setRegenerateError(null);
+      try {
+        const trimmed = typeof extraNotes === "string" ? extraNotes.trim() : "";
+        const prompt = trimmed
+          ? `${img.prompt}\n\nAdditional direction: ${trimmed}`
+          : img.prompt;
+        const res = await fetch(`${api}/generate-images/single`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ prompt }),
         });
+        const data = (await res.json().catch(() => ({}))) as { base64?: string; mimeType?: string; error?: string };
+        if (res.ok && data.base64) {
+          setGeneratedImages((prev) => {
+            if (!prev) return prev;
+            const next = [...prev];
+            next[idx] = { ...next[idx], base64: data.base64, mimeType: data.mimeType ?? "image/png" };
+            return next;
+          });
+          setRegeneratePanelIndex(null);
+        } else {
+          setRegenerateError({ index: idx, message: data.error ?? "Image generation failed" });
+        }
+      } catch (e) {
+        setRegenerateError({
+          index: idx,
+          message: e instanceof Error ? e.message : "Network error",
+        });
+      } finally {
+        setRegeneratingIndex(null);
       }
-    } catch {
-      // ignore
-    }
-  }, [generatedImages]);
+    },
+    [api, generatedImages]
+  );
+
+  const toggleRegeneratePanel = useCallback((idx: number) => {
+    setRegeneratePanelIndex((prev) => {
+      if (prev === idx) {
+        setRegenerateExtraNotes("");
+        return null;
+      }
+      return idx;
+    });
+    setRegenerateError(null);
+  }, []);
 
   const handleToggleInclude = useCallback((idx: number) => {
     setGeneratedImages((prev) => {
@@ -596,157 +838,6 @@ export function ContentProductionTool({
       return next;
     });
   }, []);
-
-  const handlePublish = useCallback(async () => {
-    if (!selectedSite || !title.trim() || !approvedContent || !generatedImages) return;
-    setPublishing(true);
-    setPublishError(null);
-
-    const wafHint =
-      " If this works locally but not on Vercel, the site’s firewall (e.g. Cloudflare) may be blocking /wp-json from Vercel. Your team can allowlist the app — see WORDPRESS_WAF_* env vars in .env.example.";
-
-    const parseApiError = (res: Response, text: string): string => {
-      let data: Record<string, unknown> = {};
-      try {
-        if (text) data = JSON.parse(text) as Record<string, unknown>;
-      } catch {
-        return res.status === 413
-          ? "Request too large for the server (Vercel payload limit). Try a smaller image or fewer images."
-          : (text || "").slice(0, 500) || `Server returned HTTP ${res.status}`;
-      }
-      let msg = typeof data.error === "string" ? data.error : `Request failed (HTTP ${res.status})`;
-      if (res.status === 413) {
-        msg =
-          typeof data.error === "string"
-            ? data.error
-            : "Payload too large for Vercel. Try a smaller image or regenerate with lower resolution.";
-      }
-      if (res.status === 403 || /403/.test(msg) || /cloudflare|blocked|forbidden/i.test(msg)) {
-        msg += wafHint;
-      }
-      return msg;
-    };
-
-    try {
-      const included = generatedImages.filter((i) => i.included);
-      const titleTrim = title.trim();
-
-      const uploadedRefs: Array<{
-        type: "featured" | "in-content";
-        index: number;
-        mediaId: number;
-        url: string;
-        altText?: string;
-        fileSlug?: string;
-        h2Index?: number;
-      }> = [];
-
-      for (let i = 0; i < included.length; i++) {
-        const img = included[i];
-        setPublishStep(`Uploading image ${i + 1} of ${included.length} to WordPress…`);
-        const upRes = await fetch(`${api}/publish/upload-image`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            siteId: selectedSite.id,
-            type: img.type,
-            index: img.index,
-            base64: img.base64,
-            mimeType: img.mimeType,
-            altText: img.altText,
-            fileSlug: img.fileSlug,
-            title: titleTrim,
-          }),
-        });
-        const upText = await upRes.text();
-        if (!upRes.ok) {
-          setPublishError(parseApiError(upRes, upText));
-          setPublishResult(null);
-          return;
-        }
-        let upData: Record<string, unknown> = {};
-        try {
-          if (upText) upData = JSON.parse(upText) as Record<string, unknown>;
-        } catch {
-          setPublishError("Invalid response while uploading an image");
-          setPublishResult(null);
-          return;
-        }
-        const id = upData.id as number;
-        const url = upData.url as string;
-        if (typeof id !== "number" || typeof url !== "string") {
-          setPublishError("WordPress did not return media id/url for an image");
-          setPublishResult(null);
-          return;
-        }
-        uploadedRefs.push({
-          type: img.type,
-          index: img.index,
-          mediaId: id,
-          url,
-          altText: img.altText,
-          fileSlug: img.fileSlug,
-          h2Index: img.h2Index,
-        });
-      }
-
-      setPublishStep("Creating draft post…");
-      const res = await fetch(`${api}/publish`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          siteId: selectedSite.id,
-          title: titleTrim,
-          content: approvedContent,
-          images: uploadedRefs,
-          referenceUrl: showReferenceUrl ? referenceUrl.trim() || undefined : undefined,
-          keywords,
-        }),
-      });
-      const text = await res.text();
-
-      let data: Record<string, unknown> = {};
-      try {
-        if (text) data = JSON.parse(text) as Record<string, unknown>;
-      } catch {
-        setPublishError(
-          res.status === 413
-            ? "Draft step payload too large (unusual). Try shortening the article HTML."
-            : (text || "").slice(0, 500) || `Server returned HTTP ${res.status}`
-        );
-        setPublishResult(null);
-        return;
-      }
-
-      if (!res.ok) {
-        let msg = typeof data.error === "string" ? data.error : `Publish failed (HTTP ${res.status})`;
-        if (res.status === 403 || /403/.test(msg) || /cloudflare|blocked|forbidden/i.test(msg)) {
-          msg += wafHint;
-        }
-        setPublishError(msg);
-        setPublishResult(null);
-        return;
-      }
-
-      setPublishError(null);
-      setPublishResult({
-        postId: data.postId as number,
-        postUrl: data.postUrl as string,
-        editUrl: data.editUrl as string,
-        site: (data.site as { name: string; url: string }) ?? { name: selectedSite.name, url: selectedSite.url },
-        rankMath: data.rankMath as { focusKeyphrase?: string; metaDescriptionSet?: boolean } | undefined,
-        yoast: data.yoast as { focusKeyphrase?: string; metaDescriptionSet?: boolean } | undefined,
-      });
-    } catch (err) {
-      setPublishStep(null);
-      setPublishResult(null);
-      setPublishError(err instanceof Error ? err.message : String(err));
-      console.error(err);
-    } finally {
-      setPublishing(false);
-      setPublishStep(null);
-    }
-  }, [selectedSite, title, approvedContent, generatedImages, referenceUrl, keywords, api, showReferenceUrl]);
 
   const handleStartNewPost = useCallback(() => {
     setTitle("");
@@ -766,6 +857,9 @@ export function ContentProductionTool({
     setApprovedContent(null);
     setPublishResult(null);
     setPublishError(null);
+    setRegeneratePanelIndex(null);
+    setRegenerateExtraNotes("");
+    setRegenerateError(null);
   }, []);
 
   return (
@@ -951,14 +1045,20 @@ export function ContentProductionTool({
                 />
               </div>
               <div>
-                <label className="mb-1 block text-xs text-slate-500">Username</label>
+                <label className="mb-1 block text-xs text-slate-500">Username (login)</label>
                 <input
                   type="text"
                   value={addForm.username}
                   onChange={(e) => setAddForm((f) => ({ ...f, username: e.target.value }))}
-                  placeholder="WordPress username"
+                  placeholder="Exact value from Users → Profile → Username"
                   className="w-full rounded border border-slate-200 px-3 py-2 text-sm"
+                  autoComplete="username"
                 />
+                <p className="mt-1 text-xs text-slate-500">
+                  Use the Username field on your profile (or the Username column under Users → All Users)—not the
+                  public display name at the top. WordPress logins cannot contain spaces; “alex weed” is a name, not
+                  the login.
+                </p>
               </div>
               <div>
                 <label className="mb-1 block text-xs text-slate-500">Application password</label>
@@ -966,9 +1066,12 @@ export function ContentProductionTool({
                   type="password"
                   value={addForm.app_password}
                   onChange={(e) => setAddForm((f) => ({ ...f, app_password: e.target.value }))}
-                  placeholder="WordPress application password"
+                  placeholder="From Users → Profile → Application Passwords"
                   className="w-full rounded border border-slate-200 px-3 py-2 text-sm"
                 />
+                <p className="mt-1 text-xs text-slate-500">
+                  Not your normal WordPress password. Paste the generated app password with or without spaces.
+                </p>
               </div>
               <div>
                 <label className="mb-1 block text-xs text-slate-500">Tone / writing style</label>
@@ -1382,7 +1485,7 @@ export function ContentProductionTool({
               <button
                 type="button"
                 onClick={handleGenerateImages}
-                disabled={imagesLoading}
+                disabled={imagesLoading || publishing}
                 className="rounded-lg bg-teal-600 px-4 py-2 text-sm font-medium text-white hover:bg-teal-700 disabled:opacity-60"
               >
                 {imagesError ? "Retry image generation" : "Generate images"}
@@ -1392,17 +1495,22 @@ export function ContentProductionTool({
             <div className="space-y-6">
               {generatedImages
                 .filter((img) => img.type === "featured")
-                .map((img, i) => (
-                  <div key={`f-${i}`} className="space-y-2">
-                    <p className="text-xs font-medium text-slate-600">Featured image</p>
-                    <div className="relative max-w-2xl">
-                      <img
-                        src={`data:${img.mimeType};base64,${img.base64}`}
-                        alt={img.altText ?? ""}
-                        className="h-auto w-full rounded-lg border border-slate-200"
-                      />
+                .map((img, i) => {
+                  const idx = generatedImages!.indexOf(img);
+                  const panelOpen = regeneratePanelIndex === idx;
+                  const busy = regeneratingIndex === idx;
+                  return (
+                    <div key={`f-${i}`} className="max-w-3xl space-y-2">
+                      <p className="text-xs font-medium text-slate-600">Featured image</p>
+                      <div className="relative aspect-video w-full overflow-hidden rounded-lg border border-slate-200 bg-slate-100">
+                        <img
+                          src={`data:${img.mimeType};base64,${img.base64}`}
+                          alt={img.altText ?? ""}
+                          className="h-full w-full object-cover"
+                        />
+                      </div>
                       {(img.altText || img.fileSlug) && (
-                        <div className="mt-1 space-y-0.5 text-xs text-slate-500">
+                        <div className="space-y-0.5 text-xs text-slate-500">
                           {img.fileSlug && (
                             <p>
                               <span className="font-medium text-slate-600">File:</span> {img.fileSlug}.jpg
@@ -1415,28 +1523,74 @@ export function ContentProductionTool({
                           )}
                         </div>
                       )}
-                      <div className="mt-2 flex flex-wrap items-center gap-2">
+                      <div className="flex flex-wrap items-center gap-2">
                         <button
                           type="button"
-                          onClick={() => handleRegenerateImage(generatedImages!.indexOf(img))}
-                          disabled={regeneratingIndex === generatedImages!.indexOf(img)}
+                          onClick={() => toggleRegeneratePanel(idx)}
+                          disabled={busy}
                           className="rounded border border-slate-200 px-2 py-1 text-xs text-slate-600 hover:bg-slate-50 disabled:opacity-60"
                         >
-                          {regeneratingIndex === generatedImages!.indexOf(img) ? "Regenerating..." : "Regenerate"}
+                          {panelOpen ? "Hide prompt" : "Regenerate…"}
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => handleRegenerateImage(idx)}
+                          disabled={busy}
+                          className="rounded border border-teal-200 bg-teal-50 px-2 py-1 text-xs font-medium text-teal-800 hover:bg-teal-100 disabled:opacity-60"
+                        >
+                          {busy ? "Regenerating…" : "Quick regenerate"}
                         </button>
                         <label className="flex cursor-pointer items-center gap-1.5 text-xs text-slate-600">
                           <input
                             type="checkbox"
                             checked={img.included}
-                            onChange={() => handleToggleInclude(generatedImages!.indexOf(img))}
+                            onChange={() => handleToggleInclude(idx)}
                             className="rounded border-slate-300"
                           />
                           Include this image
                         </label>
                       </div>
+                      {panelOpen && (
+                        <div className="rounded-lg border border-slate-200 bg-slate-50/80 p-3 space-y-2">
+                          <label htmlFor={`regen-notes-${idx}`} className="block text-xs font-medium text-slate-600">
+                            Optional prompt details
+                          </label>
+                          <textarea
+                            id={`regen-notes-${idx}`}
+                            rows={3}
+                            value={regenerateExtraNotes}
+                            onChange={(e) => setRegenerateExtraNotes(e.target.value)}
+                            placeholder="e.g. warmer light, more product close-up, softer background, no text in frame…"
+                            className="w-full resize-y rounded-md border border-slate-200 bg-white px-2.5 py-2 text-sm text-slate-800 placeholder:text-slate-400 focus:border-teal-500 focus:outline-none focus:ring-1 focus:ring-teal-500"
+                          />
+                          <p className="text-[11px] text-slate-500">
+                            Appended to the original image prompt. Leave blank to match the original prompt only.
+                          </p>
+                          <div className="flex flex-wrap items-center gap-2">
+                            <button
+                              type="button"
+                              onClick={() => handleRegenerateImage(idx, regenerateExtraNotes)}
+                              disabled={busy}
+                              className="rounded-lg bg-teal-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-teal-700 disabled:opacity-60"
+                            >
+                              {busy ? "Generating…" : "Generate with details"}
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => setRegeneratePanelIndex(null)}
+                              className="rounded border border-slate-200 px-2 py-1 text-xs text-slate-600 hover:bg-slate-100"
+                            >
+                              Cancel
+                            </button>
+                          </div>
+                          {regenerateError?.index === idx && (
+                            <p className="text-xs text-red-600">{regenerateError.message}</p>
+                          )}
+                        </div>
+                      )}
                     </div>
-                  </div>
-                ))}
+                  );
+                })}
               {generatedImages.filter((img) => img.type === "in-content").length > 0 && (
                 <>
                   <p className="text-xs font-medium text-slate-600">In-content images</p>
@@ -1444,49 +1598,99 @@ export function ContentProductionTool({
                     {generatedImages
                       .filter((img) => img.type === "in-content")
                       .sort((a, b) => a.index - b.index)
-                      .map((img, i) => (
-                        <div key={`ic-${img.index}`} className="rounded-lg border border-slate-200 p-2">
-                          <img
-                            src={`data:${img.mimeType};base64,${img.base64}`}
-                            alt={img.altText ?? ""}
-                            className="h-auto w-full rounded"
-                          />
-                          <p className="mt-1 text-xs font-medium text-slate-700">
-                            {img.sectionHeading ? `Section: ${img.sectionHeading}` : `In-content ${i + 1}`}
-                          </p>
-                          <div className="mt-1 space-y-0.5 text-[11px] text-slate-500">
-                            {img.fileSlug && (
-                              <p>
-                                <span className="font-medium text-slate-600">File:</span> {img.fileSlug}.jpg
-                              </p>
-                            )}
-                            {img.altText && (
-                              <p>
-                                <span className="font-medium text-slate-600">Alt:</span> {img.altText}
-                              </p>
-                            )}
-                          </div>
-                          <div className="mt-2 flex flex-wrap items-center gap-2">
-                            <button
-                              type="button"
-                              onClick={() => handleRegenerateImage(generatedImages!.indexOf(img))}
-                              disabled={regeneratingIndex === generatedImages!.indexOf(img)}
-                              className="rounded border border-slate-200 px-2 py-1 text-xs text-slate-600 hover:bg-slate-50 disabled:opacity-60"
-                            >
-                              {regeneratingIndex === generatedImages!.indexOf(img) ? "Regenerating..." : "Regenerate"}
-                            </button>
-                            <label className="flex cursor-pointer items-center gap-1.5 text-xs text-slate-600">
-                              <input
-                                type="checkbox"
-                                checked={img.included}
-                                onChange={() => handleToggleInclude(generatedImages!.indexOf(img))}
-                                className="rounded border-slate-300"
+                      .map((img, i) => {
+                        const idx = generatedImages!.indexOf(img);
+                        const panelOpen = regeneratePanelIndex === idx;
+                        const busy = regeneratingIndex === idx;
+                        return (
+                          <div key={`ic-${img.index}`} className="rounded-lg border border-slate-200 p-2">
+                            <div className="aspect-video w-full overflow-hidden rounded bg-slate-100">
+                              <img
+                                src={`data:${img.mimeType};base64,${img.base64}`}
+                                alt={img.altText ?? ""}
+                                className="h-full w-full object-cover"
                               />
-                              Include this image
-                            </label>
+                            </div>
+                            <p className="mt-1 text-xs font-medium text-slate-700">
+                              {img.sectionHeading ? `Section: ${img.sectionHeading}` : `In-content ${i + 1}`}
+                            </p>
+                            <div className="mt-1 space-y-0.5 text-[11px] text-slate-500">
+                              {img.fileSlug && (
+                                <p>
+                                  <span className="font-medium text-slate-600">File:</span> {img.fileSlug}.jpg
+                                </p>
+                              )}
+                              {img.altText && (
+                                <p>
+                                  <span className="font-medium text-slate-600">Alt:</span> {img.altText}
+                                </p>
+                              )}
+                            </div>
+                            <div className="mt-2 flex flex-wrap items-center gap-2">
+                              <button
+                                type="button"
+                                onClick={() => toggleRegeneratePanel(idx)}
+                                disabled={busy}
+                                className="rounded border border-slate-200 px-2 py-1 text-xs text-slate-600 hover:bg-slate-50 disabled:opacity-60"
+                              >
+                                {panelOpen ? "Hide prompt" : "Regenerate…"}
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => handleRegenerateImage(idx)}
+                                disabled={busy}
+                                className="rounded border border-teal-200 bg-teal-50 px-2 py-1 text-xs font-medium text-teal-800 hover:bg-teal-100 disabled:opacity-60"
+                              >
+                                {busy ? "Regenerating…" : "Quick regenerate"}
+                              </button>
+                              <label className="flex cursor-pointer items-center gap-1.5 text-xs text-slate-600">
+                                <input
+                                  type="checkbox"
+                                  checked={img.included}
+                                  onChange={() => handleToggleInclude(idx)}
+                                  className="rounded border-slate-300"
+                                />
+                                Include this image
+                              </label>
+                            </div>
+                            {panelOpen && (
+                              <div className="mt-2 rounded-md border border-slate-200 bg-slate-50/80 p-2 space-y-2">
+                                <label htmlFor={`regen-notes-ic-${idx}`} className="block text-[11px] font-medium text-slate-600">
+                                  Optional prompt details
+                                </label>
+                                <textarea
+                                  id={`regen-notes-ic-${idx}`}
+                                  rows={3}
+                                  value={regenerateExtraNotes}
+                                  onChange={(e) => setRegenerateExtraNotes(e.target.value)}
+                                  placeholder="e.g. warmer light, different angle, more contrast…"
+                                  className="w-full resize-y rounded border border-slate-200 bg-white px-2 py-1.5 text-xs text-slate-800 placeholder:text-slate-400 focus:border-teal-500 focus:outline-none focus:ring-1 focus:ring-teal-500"
+                                />
+                                <div className="flex flex-wrap items-center gap-2">
+                                  <button
+                                    type="button"
+                                    onClick={() => handleRegenerateImage(idx, regenerateExtraNotes)}
+                                    disabled={busy}
+                                    className="rounded bg-teal-600 px-2.5 py-1 text-[11px] font-medium text-white hover:bg-teal-700 disabled:opacity-60"
+                                  >
+                                    {busy ? "Generating…" : "Generate with details"}
+                                  </button>
+                                  <button
+                                    type="button"
+                                    onClick={() => setRegeneratePanelIndex(null)}
+                                    className="rounded border border-slate-200 px-2 py-1 text-[11px] text-slate-600 hover:bg-slate-100"
+                                  >
+                                    Cancel
+                                  </button>
+                                </div>
+                                {regenerateError?.index === idx && (
+                                  <p className="text-[11px] text-red-600">{regenerateError.message}</p>
+                                )}
+                              </div>
+                            )}
                           </div>
-                        </div>
-                      ))}
+                        );
+                      })}
                   </div>
                 </>
               )}
@@ -1509,9 +1713,21 @@ export function ContentProductionTool({
         <h2 className="text-sm font-medium text-slate-500">Publish</h2>
         <div className="mt-2 rounded-lg border border-slate-200 bg-white p-4">
           {publishResult ? (
-            <div className="rounded-lg border border-green-200 bg-green-50 p-4">
-              <p className="font-medium text-green-800">Draft published successfully</p>
-              <p className="mt-1 text-sm text-green-700">{publishResult.site.name} – {title}</p>
+            <>
+              <div className="rounded-lg border border-green-200 bg-green-50 p-4">
+              <p className="font-medium text-green-800">
+                {publishing
+                  ? "Sending to WordPress…"
+                  : publishResult.updated
+                    ? "Draft updated successfully"
+                    : "Draft published successfully"}
+              </p>
+              <p className="mt-1 text-sm text-green-700">
+                {publishResult.site.name} – {title}
+                {!publishing && publishResult.postId ? (
+                  <span className="ml-2 font-mono text-xs text-green-600/90">(post #{publishResult.postId})</span>
+                ) : null}
+              </p>
               {(() => {
                 const seo = publishResult.rankMath ?? publishResult.yoast;
                 const label = publishResult.rankMath ? "Rank Math" : "Yoast SEO";
@@ -1527,6 +1743,9 @@ export function ContentProductionTool({
                   </p>
                 );
               })()}
+              <p className="mt-2 text-xs text-green-800/90">
+                After you edit the article or images above, you can push changes to the same WordPress draft without creating a duplicate post.
+              </p>
               <div className="mt-3 flex flex-wrap gap-2">
                 <a
                   href={publishResult.editUrl}
@@ -1538,13 +1757,28 @@ export function ContentProductionTool({
                 </a>
                 <button
                   type="button"
+                  onClick={handleRepublishDraft}
+                  disabled={publishing || !generatedImages}
+                  className="rounded-lg border border-green-600 bg-white px-4 py-2 text-sm font-medium text-green-800 hover:bg-green-100 disabled:cursor-not-allowed disabled:opacity-50"
+                >
+                  {publishing ? "Updating draft…" : "Update draft in WordPress"}
+                </button>
+                <button
+                  type="button"
                   onClick={handleStartNewPost}
                   className="rounded-lg border border-green-300 bg-white px-4 py-2 text-sm font-medium text-green-700 hover:bg-green-100"
                 >
                   Start new post
                 </button>
               </div>
-            </div>
+              </div>
+              {publishError ? (
+                <div className="mt-3 rounded-lg border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-900">
+                  <p className="font-semibold text-rose-800">Could not update draft</p>
+                  <p className="mt-2 whitespace-pre-wrap break-words font-mono text-xs leading-relaxed">{publishError}</p>
+                </div>
+              ) : null}
+            </>
           ) : section4Unlocked ? (
             <div className="space-y-4">
               <div className="rounded-lg border border-slate-200 bg-slate-50/50 p-3 text-sm">
@@ -1567,8 +1801,14 @@ export function ContentProductionTool({
                   <li className={publishStep === "Uploading in-content images..." ? "font-medium text-teal-600" : publishStep === "Creating draft post..." ? "text-slate-400" : ""}>
                     2. Uploading in-content images...
                   </li>
-                  <li className={publishStep === "Creating draft post..." ? "font-medium text-teal-600" : ""}>
-                    3. Creating draft post...
+                  <li
+                    className={
+                      publishStep === "Creating draft post…" || publishStep === "Updating draft post…"
+                        ? "font-medium text-teal-600"
+                        : ""
+                    }
+                  >
+                    3. {publishStep === "Updating draft post…" ? "Updating draft post…" : "Creating draft post…"}
                   </li>
                 </ol>
               )}
@@ -1581,18 +1821,24 @@ export function ContentProductionTool({
                   </p>
                 </div>
               ) : null}
+              <p className="text-xs text-slate-500">
+                Nothing is sent to WordPress until you click <span className="font-medium">Publish as Draft</span>. Edit
+                content or images above first if needed.
+              </p>
               <button
                 type="button"
                 onClick={handlePublish}
                 disabled={publishing}
                 className="rounded-lg bg-teal-600 px-4 py-2 text-sm font-medium text-white hover:bg-teal-700 disabled:opacity-60"
               >
-                {publishing ? "Publishing..." : `Publish as Draft to ${selectedSite?.name ?? ""}`}
+                {publishing ? "Sending to WordPress…" : `Publish as Draft to ${selectedSite?.name ?? ""}`}
               </button>
             </div>
           ) : (
             <div className="rounded-lg border border-dashed border-slate-300 bg-slate-50 p-6 text-center text-slate-500">
-              Approve content and images above to unlock publish
+              {publishing
+                ? "Sending draft to WordPress…"
+                : "Approve content and images above, then click Publish as Draft to send to WordPress."}
             </div>
           )}
         </div>

@@ -16,3 +16,173 @@
     @apply border border-white/20 bg-white/5 backdrop-blur-md;
   }
 }
+
+/*
+ * Weed.com Learn — Expert Insight (green): pill "EXPERT INSIGHT", name beside it,
+ * thick left bar, rounded panel, serif body, ruled citation — matches Bible inline template.
+ */
+.expert-box {
+  margin: 1.75rem 0;
+  padding: 1.35rem 1.5rem 1.4rem 1.35rem;
+  border-radius: 0.75rem;
+  background-color: #f0fdf4;
+  border: 1px solid rgba(22, 101, 52, 0.22);
+  border-left: 6px solid #166534;
+  box-shadow: 0 1px 3px rgba(22, 101, 52, 0.08);
+}
+
+.expert-box-label {
+  display: flex;
+  flex-direction: row;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.65rem 0.85rem;
+  margin-bottom: 1rem;
+}
+
+.expert-badge {
+  display: inline-block;
+  flex-shrink: 0;
+  padding: 0.35rem 0.75rem;
+  border-radius: 9999px;
+  background-color: #166534;
+  color: #fff;
+  font-family: var(--font-jakarta), system-ui, -apple-system, sans-serif;
+  font-size: 0.625rem;
+  font-weight: 700;
+  font-style: normal;
+  letter-spacing: 0.11em;
+  line-height: 1.25;
+  text-transform: uppercase;
+}
+
+.expert-name {
+  font-family: var(--font-jakarta), system-ui, -apple-system, sans-serif;
+  font-weight: 600;
+  font-size: 1rem;
+  font-style: normal;
+  color: #a16207;
+  letter-spacing: 0.01em;
+}
+
+.expert-box > p {
+  margin: 0 0 0.9rem;
+  font-family: Georgia, "Times New Roman", "Liberation Serif", serif;
+  font-size: 1rem;
+  font-weight: 400;
+  line-height: 1.65;
+  color: #1c1917;
+}
+
+.expert-box > p:last-of-type {
+  margin-bottom: 0;
+}
+
+.expert-cite {
+  margin-top: 1rem;
+  padding-top: 0.9rem;
+  border-top: 1px solid rgba(22, 101, 52, 0.28);
+  font-family: Georgia, "Times New Roman", "Liberation Serif", serif;
+  font-size: 0.875rem;
+  line-height: 1.55;
+  font-style: italic;
+  color: #57534e;
+}
+
+.expert-cite em {
+  font-style: italic;
+}
+
+.expert-cite a {
+  color: #0f766e;
+  font-style: normal;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+.expert-cite a:hover {
+  color: #0d9488;
+}
+
+/* Older generated drafts: single-line head instead of pill row */
+.expert-box-head {
+  margin: 0 0 1rem;
+  font-family: var(--font-jakarta), system-ui, sans-serif;
+  font-size: 1rem;
+  font-weight: 600;
+  line-height: 1.35;
+  color: #0f172a;
+}
+
+.expert-box-head strong {
+  font-weight: 700;
+}
+
+/*
+ * Product CTA row (cream panel + forest green button) — matches Learn commerce cards.
+ */
+.product-cta {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem 1.25rem;
+  margin: 1.5rem 0;
+  padding: 1.35rem 1.5rem;
+  border-radius: 0.875rem;
+  background-color: #f4f1e8;
+  border: 1px solid rgba(45, 90, 69, 0.14);
+}
+
+.product-cta-text {
+  flex: 1;
+  min-width: 0;
+}
+
+.product-cta-name {
+  font-family: var(--font-jakarta), system-ui, sans-serif;
+  font-weight: 700;
+  font-size: 1.125rem;
+  line-height: 1.3;
+  color: #0f172a;
+  margin-bottom: 0.35rem;
+}
+
+.product-cta-desc {
+  font-family: var(--font-jakarta), system-ui, sans-serif;
+  font-size: 0.9375rem;
+  line-height: 1.45;
+  color: #666666;
+}
+
+.product-cta-btn {
+  flex-shrink: 0;
+  display: inline-block;
+  padding: 0.65rem 1.35rem;
+  border-radius: 0.5rem;
+  background-color: #2d5a45;
+  color: #fff !important;
+  font-family: var(--font-jakarta), system-ui, sans-serif;
+  font-weight: 600;
+  font-size: 0.9375rem;
+  text-decoration: none !important;
+  white-space: nowrap;
+  transition: background-color 0.15s ease;
+}
+
+.product-cta-btn:hover {
+  background-color: #234a38;
+  color: #fff !important;
+}
+
+@media (max-width: 640px) {
+  .product-cta {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .product-cta-btn {
+    text-align: center;
+    white-space: normal;
+  }
+}
