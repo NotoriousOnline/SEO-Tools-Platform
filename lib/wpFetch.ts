@@ -4,7 +4,7 @@
  * fine in public DNS; resolving A records via DoH fixes uploads without changing Site URL.
  */
 import dns from "node:dns";
-import { Agent, fetch as undiciFetch, interceptors } from "undici";
+import Undici, { Agent, fetch as undiciFetch, interceptors } from "undici";
 import type { Agent as AgentType } from "undici";
 
 if (typeof dns.setDefaultResultOrder === "function") {
@@ -103,7 +103,7 @@ export function getWpFetchDispatcher(): AgentType {
       maxRedirections: 5,
       interceptors: {
         Agent: [
-          interceptors.createRedirectInterceptor({ maxRedirections: 5 }),
+          Undici.createRedirectInterceptor({ maxRedirections: 5 }),
           interceptors.dns({
             dualStack: true,
             lookup: wordpressDnsLookup as never,
