@@ -11,12 +11,6 @@ if (typeof dns.setDefaultResultOrder === "function") {
   dns.setDefaultResultOrder("ipv4first");
 }
 
-/** CJS export missing from package types. */
-// eslint-disable-next-line @typescript-eslint/no-require-imports
-const { createRedirectInterceptor } = require("undici") as {
-  createRedirectInterceptor: (opts: { maxRedirections: number }) => (dispatch: unknown) => unknown;
-};
-
 function dnsDohFallbackEnabled(): boolean {
   return (process.env.WORDPRESS_DNS_DOH_FALLBACK ?? "true").trim().toLowerCase() !== "false";
 }
@@ -109,7 +103,7 @@ export function getWpFetchDispatcher(): AgentType {
       maxRedirections: 5,
       interceptors: {
         Agent: [
-          createRedirectInterceptor({ maxRedirections: 5 }),
+          interceptors.createRedirectInterceptor({ maxRedirections: 5 }),
           interceptors.dns({
             dualStack: true,
             lookup: wordpressDnsLookup as never,

@@ -406,6 +406,8 @@ export function ContentProductionTool({
     async (contentHtml: string, images: ImageItem[], existingPostId?: number) => {
       if (!selectedSite || !title.trim() || !contentHtml) return;
 
+      const isUpdate = existingPostId != null;
+
       publishCancelledRef.current = false;
       publishAbortRef.current?.abort();
       publishAbortRef.current = new AbortController();
@@ -796,11 +798,13 @@ export function ContentProductionTool({
           body: JSON.stringify({ prompt }),
         });
         const data = (await res.json().catch(() => ({}))) as { base64?: string; mimeType?: string; error?: string };
-        if (res.ok && data.base64) {
+        const newBase64 = data.base64;
+        if (res.ok && newBase64) {
+          const mime = data.mimeType ?? "image/png";
           setGeneratedImages((prev) => {
             if (!prev) return prev;
             const next = [...prev];
-            next[idx] = { ...next[idx], base64: data.base64, mimeType: data.mimeType ?? "image/png" };
+            next[idx] = { ...next[idx], base64: newBase64, mimeType: mime };
             return next;
           });
           setRegeneratePanelIndex(null);
