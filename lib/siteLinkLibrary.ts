@@ -16,6 +16,7 @@ import {
   type WPPostListItem,
   type WCProductListItem,
 } from "@/lib/wordpressClient";
+import { resolveWooCommerceProductImageUrl } from "@/lib/wooProductImageUrl";
 
 export type LinkCandidate = {
   title: string;
@@ -89,7 +90,47 @@ export type LinkLibraryRow = {
   image_url?: string | null;
 };
 
+/** Parse `https://example.com` origin from wp_sites.url (adds https if missing). */
+export function parseSiteOrigin(siteUrl: string): string | null {
+  const s = siteUrl.trim();
+  if (!s) return null;
+  try {
+    const u = new URL(s.startsWith("http://") || s.startsWith("https://") ? s : `https://${s}`);
+    return u.origin;
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * True if `url` is same site as configured `siteOrigin` (hostname ignores www; protocol must match).
+ */
+export function urlMatchesSiteOrigin(url: string, siteOrigin: string): boolean {
+  try {
+    const link = new URL(url.trim());
+    const site = new URL(siteOrigin);
+    const normHost = (h: string) => h.replace(/^www\./i, "").toLowerCase();
+    return (
+      normHost(link.hostname) === normHost(site.hostname) && link.protocol === site.protocol
+    );
+  } catch {
+    return false;
+  }
+}
+
+/** Drops candidates whose URL does not belong to the configured site (stale staging or wrong host). */
+export function filterLinkCandidatesToSiteOrigin(
+  candidates: LinkCandidate[],
+  siteUrl: string
+): LinkCandidate[] {
+  const origin = parseSiteOrigin(siteUrl);
+  if (!origin) return candidates;
+  return candidates.filter((c) => urlMatchesSiteOrigin(c.url, origin));
+}
+
 export type GetCandidatesOptions = {
+  /** When set, only rows whose `url` matches this site's origin are used (Supabase must match live site). */
+  siteUrlForOriginFilter?: string;
   /** When set with a non-empty value, up to `productLinkSlots` product URLs are placed first in the candidate list. */
   productTypeHint?: string;
   /** Max product URLs to reserve (clamped 1–2). Default 2. */
@@ -100,6 +141,8 @@ export type GetCandidatesOptions = {
   minPostPageSlots?: number;
   /** Max editorial post/page URLs to reserve (default 3, max 3). Set 0 to skip post reservation. */
   maxPostPageSlots?: number;
+  /** Site home URL (no trailing slash) — resolves relative WooCommerce image paths in live product fallback. */
+  siteOriginForProductImages?: string;
 };
 
 function inferLinkKind(row: { kind?: string | null }): NonNullable<LinkCandidate["linkKind"]> {
@@ -108,6 +151,18 @@ function inferLinkKind(row: { kind?: string | null }): NonNullable<LinkCandidate
   if (k === "page") return "page";
   if (k === "post") return "post";
   return "other";
+}
+
+function resolvedCandidateImageUrl(
+  r: { image_url?: string | null; url: string },
+  linkKind: NonNullable<LinkCandidate["linkKind"]>
+): string | undefined {
+  const raw = r.image_url?.trim();
+  if (!raw) return undefined;
+  if (linkKind === "product") {
+    return resolveWooCommerceProductImageUrl(raw, r.url) ?? undefined;
+  }
+  return raw;
 }
 
 function pushCandidate(
@@ -122,7 +177,7 @@ function pushCandidate(
   out.push({
     title: r.title || "Untitled",
     url: u,
-    imageUrl: r.image_url?.trim() || undefined,
+    imageUrl: resolvedCandidateImageUrl(r, linkKind),
     linkKind,
   });
   return true;
@@ -280,11 +335,12 @@ export function pickDiverseLinkCandidates(
     const url = row.url.trim();
     if (!url || seenUrl.has(url)) continue;
     seenUrl.add(url);
+    const lk = inferLinkKind(row);
     out.push({
       title: row.title || "Untitled",
       url,
-      imageUrl: row.image_url?.trim() || undefined,
-      linkKind: inferLinkKind(row),
+      imageUrl: resolvedCandidateImageUrl(row, lk),
+      linkKind: lk,
     });
   }
 
@@ -321,7 +377,14 @@ export async function getCandidatesFromLibrary(
   count: number,
   options?: GetCandidatesOptions
 ): Promise<LinkCandidate[]> {
-  const rows = await fetchLibraryRowsForSite(wpSiteId);
+  let rows = await fetchLibraryRowsForSite(wpSiteId);
+  const siteUrl = options?.siteUrlForOriginFilter?.trim();
+  if (siteUrl) {
+    const origin = parseSiteOrigin(siteUrl);
+    if (origin) {
+      rows = rows.filter((r) => urlMatchesSiteOrigin(r.url, origin));
+    }
+  }
   return pickLinkCandidatesWithProductBias(rows, keywords, articleTitle, count, options);
 }
 
@@ -345,13 +408,22 @@ function mapWpPostToRows(wpSiteId: string, posts: WPPostListItem[]) {
   });
 }
 
-function mapWcProductToRows(wpSiteId: string, products: WCProductListItem[]) {
+function firstResolvableWooImageSrc(p: WCProductListItem, siteBaseUrl: string): string | null {
+  for (const im of p.images ?? []) {
+    const resolved = resolveWooCommerceProductImageUrl(im?.src, p.permalink, siteBaseUrl);
+    if (resolved) return resolved;
+  }
+  return null;
+}
+
+function mapWcProductToRows(wpSiteId: string, products: WCProductListItem[], siteBaseUrl: string) {
   const now = new Date().toISOString();
+  const base = siteBaseUrl.replace(/\/$/, "");
   return products.map((p) => {
     const title = stripHtml(p.name ?? "") || p.slug || "Untitled";
     const excerpt = stripHtml(p.short_description ?? "");
     const searchBlob = [title, p.slug, excerpt].filter(Boolean).join(" ").slice(0, 8000);
-    const imageSrc = p.images?.[0]?.src?.trim();
+    const imageSrc = firstResolvableWooImageSrc(p, base);
     return {
       wp_site_id: wpSiteId,
       wp_post_id: p.id,
@@ -361,7 +433,7 @@ function mapWcProductToRows(wpSiteId: string, products: WCProductListItem[]) {
       kind: "product" as const,
       excerpt: excerpt || null,
       search_text: searchBlob || null,
-      image_url: imageSrc || null,
+      image_url: imageSrc,
       source_updated_at: now,
     };
   });
@@ -433,7 +505,8 @@ export async function syncProductInternalLinksFromWordPress(
     throw delErr;
   }
 
-  const rows = mapWcProductToRows(wpSiteId, all);
+  const siteBase = site.url.replace(/\/$/, "");
+  const rows = mapWcProductToRows(wpSiteId, all, siteBase);
   for (let i = 0; i < rows.length; i += SYNC_CHUNK) {
     const chunk = rows.slice(i, i + SYNC_CHUNK);
     const { error: insErr } = await sb.from("site_internal_links").insert(chunk);
@@ -483,11 +556,12 @@ export function pickCandidatesFromLivePostsAndProducts(
     kind: "post",
     image_url: null,
   }));
+  const siteBase = options?.siteOriginForProductImages?.replace(/\/$/, "") ?? "";
   const prodRows: LinkLibraryRow[] = (products ?? []).map((p) => {
     const title = stripHtml(p.name ?? "") || p.slug || "Untitled";
     const excerpt = stripHtml(p.short_description ?? "");
     const searchBlob = [title, p.slug, excerpt].filter(Boolean).join(" ").slice(0, 8000);
-    const imageSrc = p.images?.[0]?.src?.trim();
+    const imageSrc = firstResolvableWooImageSrc(p, siteBase);
     return {
       title,
       url: p.permalink,
@@ -495,7 +569,7 @@ export function pickCandidatesFromLivePostsAndProducts(
       excerpt: excerpt || null,
       search_text: searchBlob || null,
       kind: "product",
-      image_url: imageSrc || null,
+      image_url: imageSrc,
     };
   });
   return pickLinkCandidatesWithProductBias([...postRows, ...prodRows], keywords, articleTitle, count, options);

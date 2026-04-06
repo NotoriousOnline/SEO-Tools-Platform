@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { getSiteById, WP_TOOL_SCOPE, type WPToolScope } from "@/lib/wpSites";
-import { stripLeadingPostTitleH1 } from "@/lib/postHtml";
+import { lockExpertBoxTypography, stripLeadingPostTitleH1 } from "@/lib/postHtml";
 import {
   createPost,
   getCategoryIdByName,
@@ -126,6 +126,21 @@ function buildMetaDescription(html: string, maxLen = 156): string {
   return `${(lastSpace > 40 ? cut.slice(0, lastSpace) : cut).trim()}...`;
 }
 
+/**
+ * Rank Math focus keyword from post title (Weed.com content production only at call site).
+ * Rank Math allows up to ~191 chars. Falls back to first editorial keyword if title is empty.
+ */
+function rankMathFocusKeywordFromTitle(postTitle: string, keywords: unknown): string {
+  const t = typeof postTitle === "string" ? postTitle.trim() : "";
+  if (t.length > 0) return t.slice(0, 191);
+  if (Array.isArray(keywords)) {
+    const k = keywords.map((x) => String(x).trim()).find((x) => x.length > 0);
+    if (k) return k.slice(0, 191);
+  }
+  return "";
+}
+
+/** Primary phrase for featured-image alt enrichment; prefers first keyword, then title snippet. */
 function pickFocusKeyphrase(keywords: unknown, title: string): string {
   if (Array.isArray(keywords)) {
     const k = keywords.map((x) => String(x).trim()).find((x) => x.length > 0);
@@ -230,7 +245,11 @@ export async function postPublish(request: Request, toolScope: WPToolScope) {
     let featuredImageUrlForBody: string | undefined;
     let featuredImageAltForBody: string | undefined;
 
-    const focuskw = pickFocusKeyphrase(keywords, title);
+    const rankMathFocusKw =
+      toolScope === WP_TOOL_SCOPE.weedComContentProduction
+        ? rankMathFocusKeywordFromTitle(title, keywords)
+        : pickFocusKeyphrase(keywords, title);
+    const focuskwForAlt = pickFocusKeyphrase(keywords, title);
 
     if (featuredImg) {
       if (isPreUploaded(featuredImg)) {
@@ -238,7 +257,7 @@ export async function postPublish(request: Request, toolScope: WPToolScope) {
         featuredImageUrlForBody = featuredImg.url;
         featuredImageAltForBody = ensureFeaturedAltIncludesKeyword(
           featuredImg.altText ?? title.slice(0, 125),
-          focuskw
+          focuskwForAlt
         );
       } else if ("base64" in featuredImg && featuredImg.base64) {
         const buf = Buffer.from(featuredImg.base64, "base64");
@@ -249,7 +268,7 @@ export async function postPublish(request: Request, toolScope: WPToolScope) {
         featuredImageUrlForBody = url;
         featuredImageAltForBody = ensureFeaturedAltIncludesKeyword(
           featuredImg.altText ?? title.slice(0, 125),
-          focuskw
+          focuskwForAlt
         );
         await updateMediaDetails(site, id, {
           alt_text: featuredImageAltForBody,
@@ -292,7 +311,10 @@ export async function postPublish(request: Request, toolScope: WPToolScope) {
       }
     }
 
-    const bodyHtml = stripLeadingPostTitleH1(typeof content === "string" ? content : "");
+    let bodyHtml = stripLeadingPostTitleH1(typeof content === "string" ? content : "");
+    if (toolScope === WP_TOOL_SCOPE.weedComContentProduction) {
+      bodyHtml = lockExpertBoxTypography(bodyHtml);
+    }
     const prependFeaturedFigureInBody = toolScope !== WP_TOOL_SCOPE.weedComContentProduction;
     const withFeaturedAtStart =
       prependFeaturedFigureInBody &&
@@ -324,7 +346,7 @@ export async function postPublish(request: Request, toolScope: WPToolScope) {
     const seoTitle = title.slice(0, 200);
     const rankMathOk = await updatePostRankMathMeta(site, postId, {
       metadesc,
-      focuskw,
+      focuskw: rankMathFocusKw,
       seoTitle,
     });
 
@@ -341,7 +363,7 @@ export async function postPublish(request: Request, toolScope: WPToolScope) {
       status,
       updated: existingPostId != null,
       site: { name: site.name, url: site.url },
-      rankMath: { metaDescriptionSet: rankMathOk, focusKeyphrase: focuskw },
+      rankMath: { metaDescriptionSet: rankMathOk, focusKeyphrase: rankMathFocusKw },
     });
   } catch (err) {
     const msg = errorMessage(err);

@@ -1,11 +1,14 @@
 import { NextResponse } from "next/server";
 import { callClaude, isClaudeServiceUnavailableError } from "@/lib/anthropic";
 import { errorMessage, serverLog } from "@/lib/serverLog";
-import { stripLeadingPostTitleH1 } from "@/lib/postHtml";
+import { lockExpertBoxTypography, stripLeadingPostTitleH1 } from "@/lib/postHtml";
 import {
+  filterLinkCandidatesToSiteOrigin,
   getCandidatesFromLibrary,
   pickCandidatesFromLivePosts,
   pickCandidatesFromLivePostsAndProducts,
+  syncInternalLinksFromWordPress,
+  syncProductInternalLinksFromWordPress,
   type LinkCandidate,
 } from "@/lib/siteLinkLibrary";
 import { getSiteById, WP_TOOL_SCOPE, type WPToolScope } from "@/lib/wpSites";
@@ -36,7 +39,7 @@ Output ONLY the continuation to append (do not repeat earlier paragraphs):
 1) If the tail ends inside an open <p> without </p>, write the minimal words to finish the sentence, then </p>.
 2) Then append FAQ (Bible outer div with Inter font-family, <h2>Frequently asked questions</h2>, then each <h3> + <p>) + amber disclaimer + Sources + legal footer. Amber box, Sources, FAQ wrapper, and footer: Bible inline style= templates with Inter for all text; copy style attributes exactly.
 3) 4-7 FAQ pairs; answers ~28-52 words each.
-4) Sources: full bibliographic lines with PMID links (digits-only pubmed URLs). Legal footer: REQUIRED — must include verbatim "For adults 21+ only. Cannabis laws vary by state." plus 911/emergency room routing in the Bible <p> template. Never omit the legal footer.`;
+4) Sources: full bibliographic lines with PMID links (digits-only pubmed URLs). Any PMID in Sources must match the paper named on that line (no fabricated or mismatched IDs; same Contentenator standard as Layer 1). Legal footer: REQUIRED — must include verbatim "For adults 21+ only. Cannabis laws vary by state." plus 911/emergency room routing in the Bible <p> template. Never omit the legal footer.`;
 
 async function finalizeWeedLearnHtml(
   html: string,
@@ -90,7 +93,9 @@ Internal linking (editorial / Bible-style): Anchor text must be deliberate and d
 
 Product mentions and editorial commerce: When citing a specific product or brand from the internal link list, weave it into the section's argument. Briefly set up why the example matters (reader goal, comparison, formulation type, use case) before the name or link. Avoid abrupt one-line product drops that read like affiliate widgets or interrupt a science/education block without transition. Prefer framing such as how readers weigh options in that category, then name the product as one concrete example. Stay factual; no unsubstantiated superiority claims.
 
-Partner product priority: When the topic supports a commerce example, prefer Shop Now blocks for products from these brands when they appear in the internal link list: Binoid, Bloomz, Hometown Hero, Blazed, Cookies, and products sourced from Binoid or Blazed warehouses when catalog copy or URLs indicate that. Still only use links from the candidate list; do not invent URLs.`;
+Partner product priority: When the topic supports a commerce example, prefer Shop Now blocks for products from these brands when they appear in the internal link list: Binoid, Bloomz, Hometown Hero, Blazed, Cookies, and products sourced from Binoid or Blazed warehouses when catalog copy or URLs indicate that. Still only use links from the candidate list; do not invent URLs.
+
+Layer 1 Expert Insight / YMYL (Contentenator): Before final output, enforce internal consistency on every Dr. Tabibi Expert Insight box — (1) study-type wording matches the PubMed record type (trial vs review vs meta-analysis, etc.), (2) every PMID is real and matches the cited paper (no fabricated or unrelated IDs), (3) specific claims trace to that same PMID, not to a primary study only mentioned inside a cited review. This gate is required before Layer 2 (human / Dr. Tabibi) review.`;
   }
   return "";
 }
@@ -100,15 +105,16 @@ function weedLayer1BiblePrompt(toolScope: WPToolScope): string {
   return `
 
 WEED.COM CONTENT GENERATION PROMPT - LAYER 1 (AI DRAFT)
-Version: Bible v6 | April 2026
-This is Layer 1 only and must be edited by a human expert before publish.
+Version: Bible v7 | April 2026
+This is Layer 1 only and must be edited by a human expert before publish (Layer 2 — including Dr. Tabibi editorial review).
 
 SYSTEM ROLE
 You are a professional cannabis content writer producing Layer 1 first drafts for Weed.com Learn.
-Follow Bible v6 strictly. Drafts are structured, evidence-referenced, and brief-compliant.
+Follow Bible v7 strictly. Drafts are structured, evidence-referenced, and brief-compliant.
 
 MANDATORY RULES
-- Typography: Inter is the only text font for the article. Every text element, block, and heading must use font-family beginning with Inter exactly: Inter,system-ui,-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif (copy verbatim from the Bible templates). That includes intro, all body <p> and section <h2>/<h3>/<h4>, lists, FAQ, product card, Sources, amber disclaimer, legal footer, and the full Expert Insight block (pill, name, body paragraphs, and expert-citation line). Do not rely on WordPress theme fonts: either wrap the entire article body in one outer <div style="font-family: Inter,..."> … </div> (same stack) so all children inherit, or put that font-family inline on every body <p>, heading, and <li>. Bible templates already include Inter on their elements — match that for all other body copy.
+- Typography (article — outside Expert Insight): Inter leads the stack. Every text element, block, and heading outside the expert-box class (CSS selector .expert-box) must use font-family beginning with Inter exactly: Inter,system-ui,-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif (copy verbatim from the Bible templates). That includes intro, all body <p> and section <h2>/<h3>/<h4>, lists, FAQ, product card, Sources, amber disclaimer, and legal footer. Do not rely on WordPress theme fonts: either wrap the entire article body in one outer <div style="font-family: Inter,..."> … </div> (same stack) so all children inherit, or put that font-family inline on every body <p>, heading, and <li>. Bible templates already include Inter on their elements — match that for all other body copy.
+- Typography (Expert Insight only — hard rule): Inside the entire expert-box block (class expert-box), every element that displays text MUST use exactly font-family:Inter,sans-serif!important (include !important on every inline style so pasted Word spans and theme link fonts cannot override). Inter plus the generic sans-serif keyword only. Do not use system-ui, -apple-system, BlinkMacSystemFont, Segoe UI, Roboto, or any other named font in that subtree. Apply on the outer expert-box div, the header row, pill, name, both body <p> tags, the expert-cite line container, and the PMID <a>.
 - Voice: knowledgeable, warm, direct, never condescending, never hype/fear, honest on evidence limits.
 - Use second person ("you") throughout.
 - No em dash character.
@@ -126,26 +132,45 @@ Target output matches the production article shape (see project reference: exper
 Positioning: Dr. Alexander Tabibi is a former physician and independent science writer who interrogates evidence critically. He is not a practising clinician. He does not advise patients. His voice appears only inside Expert Insight boxes below — not as inline "according to Dr. Tabibi" in every paragraph, and never as practising-clinic or patient-specific advice.
 Hard rules — never write: "in his clinical practice"; that he tells patients what to take; "Reviewed by a medical professional" without his full name; any implication he currently practises medicine or treats patients.
 
-Expert Insight blocks MUST use INLINE CSS ONLY (no reliance on WordPress theme). Copy the template below verbatim and preserve every style="..." attribute. Only replace the paragraph text, citation text, PMID digits in the URL, and the PMID link label.
+Expert Insight blocks MUST use INLINE CSS ONLY (no reliance on WordPress theme). Copy the template below verbatim and preserve every style="..." attribute, class="expert-box", and Inter-only font rules (always font-family:Inter,sans-serif!important). Only replace the paragraph text, citation text, PMID digits in the URL, and the PMID link label.
 
 Template (Expert Insight):
 
-<div style="margin:1.75rem 0;padding:1.35rem 1.5rem 1.4rem 1.35rem;border-radius:0.75rem;background-color:#f0fdf4;border:1px solid rgba(22,101,52,0.22);border-left:6px solid #166534;box-shadow:0 1px 3px rgba(22,101,52,0.08);">
-<div style="display:flex;flex-wrap:wrap;align-items:center;gap:0.65rem 0.85rem;margin-bottom:1rem;">
-<span style="display:inline-block;padding:0.35rem 0.75rem;border-radius:9999px;background-color:#166534;color:#fff;font-family:Inter,system-ui,-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;font-size:0.625rem;font-weight:700;letter-spacing:0.11em;text-transform:uppercase;line-height:1.25;">Expert Insight</span>
-<span style="font-family:Inter,system-ui,-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;font-weight:600;font-size:1rem;color:#15803d;">Dr. Alexander Tabibi</span>
+<div class="expert-box" style="margin:1.75rem 0;padding:1.35rem 1.5rem 1.4rem 1.35rem;border-radius:0.75rem;background-color:#f0fdf4;border:1px solid rgba(22,101,52,0.22);border-left:6px solid #166534;box-shadow:0 1px 3px rgba(22,101,52,0.08);font-family:Inter,sans-serif!important;">
+<div style="display:flex;flex-wrap:wrap;align-items:center;gap:0.65rem 0.85rem;margin-bottom:1rem;font-family:Inter,sans-serif!important;">
+<span style="display:inline-block;padding:0.35rem 0.75rem;border-radius:9999px;background-color:#166534;color:#fff;font-family:Inter,sans-serif!important;font-size:0.625rem;font-weight:700;letter-spacing:0.11em;text-transform:uppercase;line-height:1.25;">Expert Insight</span>
+<span style="font-family:Inter,sans-serif!important;font-weight:600;font-size:1rem;color:#15803d;">Dr. Alexander Tabibi</span>
 </div>
-<p style="margin:0 0 0.9rem;font-family:Inter,system-ui,-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;font-size:1rem;line-height:1.65;color:#1c1917;">First paragraph: evidence summary or short-term picture in science-writer voice.</p>
-<p style="margin:0 0 0.9rem;font-family:Inter,system-ui,-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;font-size:1rem;line-height:1.65;color:#1c1917;">Second paragraph: complication, limits of studies, or longer-term pattern — still measured, not alarmist.</p>
-<div style="margin-top:1rem;padding-top:0.9rem;border-top:1px solid rgba(22,101,52,0.28);font-family:Inter,system-ui,-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;font-size:0.875rem;line-height:1.55;font-style:italic;color:#57534e;">LeadAuthor et al. (Year). Full article title. <em>Journal Name</em>, vol(issue):pages. <a href="https://pubmed.ncbi.nlm.nih.gov/NNNNNN/" style="color:#0f766e;font-style:normal;text-decoration:underline;">PMID: NNNNNN</a></div>
+<p style="margin:0 0 0.9rem;font-family:Inter,sans-serif!important;font-size:1rem;line-height:1.65;color:#1c1917;">First paragraph: evidence summary or short-term picture in science-writer voice.</p>
+<p style="margin:0 0 0.9rem;font-family:Inter,sans-serif!important;font-size:1rem;line-height:1.65;color:#1c1917;">Second paragraph: complication, limits of studies, or longer-term pattern — still measured, not alarmist.</p>
+<div style="margin-top:1rem;padding-top:0.9rem;border-top:1px solid rgba(22,101,52,0.28);font-family:Inter,sans-serif!important;font-size:0.875rem;line-height:1.55;font-style:italic;color:#57534e;">LeadAuthor et al. (Year). Full article title. <em>Journal Name</em>, vol(issue):pages. <a href="https://pubmed.ncbi.nlm.nih.gov/NNNNNN/" style="font-family:Inter,sans-serif!important;color:#0f766e;font-style:normal;text-decoration:underline;">PMID: NNNNNN</a></div>
 </div>
 
-Expert-cite format: one bibliographic line — authors, year, full title, italic journal, volume/issue/pages, then PMID. Hyperlink only the PMID using the PubMed record URL (digits path only). The <a> must keep style="color:#0f766e;font-style:normal;text-decoration:underline;".
+Expert-cite format: one bibliographic line — authors, year, full title, italic journal, volume/issue/pages, then PMID. Hyperlink only the PMID using the PubMed record URL (digits path only). The <a> must include font-family:Inter,sans-serif!important and keep color, font-style, and text-decoration as in the template.
 - PubMed PMID links may appear ONLY inside Dr. Alexander Tabibi Expert Insight boxes (the expert-cite line at the bottom of each block). Do not place PubMed links in the intro, body paragraphs, FAQ, or elsewhere outside Expert Insight.
 
 Placement rhythm (typical long article): first Expert Insight after the opening <h2> section or early in the piece; additional boxes after major mechanistic or dose/evidence sections (often 3 boxes total). Each box should stand near the health, sleep, dose, pharmacology, or risk content it supports.
 
-CITATIONS (strict — one paper, one PMID link)
+CONTENTENATOR — LAYER 1 EXPERT INSIGHT CONSISTENCY (YMYL; internal gate before Layer 2 / Dr. Tabibi)
+Run this mental checklist on every Expert Insight box before you finish the draft. Output must pass these gates so Layer 2 never receives drafts with citation integrity failures. Applies to all Expert Insight blocks on cannabis health, medical or dosing-adjacent claims, sleep, pain, mental health, pharmacology, drug–drug interaction context, or other YMYL-adjacent topics.
+
+1) Study-type accuracy
+- If the box (or tightly coupled sentences that the box supports) describes evidence using terms such as "trial," "study," "RCT," "randomized," "clinical trial," "meta-analysis," "systematic review," "review," "cohort," "case series," "observational study," or similar, that description MUST match the publication type shown on the PubMed record for the PMID you cite.
+- Do not label a narrative review or meta-analysis as if it were a single primary RCT, or vice versa. If the PubMed record is a review or meta-analysis that synthesizes other work, say so clearly in the Expert Insight prose (e.g. "a 2020 systematic review of…") and do not imply the box cites a direct primary trial unless the cited PMID is that trial.
+
+2) PMID verification (no fabricated or mismatched IDs)
+- Every PMID used in an Expert Insight expert-cite href (https://pubmed.ncbi.nlm.nih.gov/<digits>/) MUST correspond to a real PubMed entry that matches the bibliographic line in the same box (authors, title, journal, year).
+- Do not invent, guess, transpose digits, or reuse a PMID from an unrelated paper you remember. If you cannot verify the exact PMID for the specific paper supporting the claim, omit that expert-cite line and PMID link; soften the claim without naming a paper.
+- A PMID that resolves to a completely unrelated article is a critical failure — treat it like fabrication.
+
+3) Claim-to-citation match (primary source; no review misattribution)
+- A specific quantitative, dose-level, or named-outcome claim in or supported by an Expert Insight box (e.g. "15 mg THC reduced sleep onset latency") must be supported by the **same PMID** in that box's expert-cite — the cited record must actually contain or directly report that finding.
+- Do not cite review PMID "A" while the specific numeric or intervention detail appears only in a primary study mentioned inside that review: either cite the primary paper's PMID (if verified) or restrict the claim to what the review itself states.
+- If only a review's summary conclusion is verifiable, write only to that level; do not attribute trial-level detail to a review PMID alone.
+
+Before returning HTML, re-read each Expert Insight block: (a) study-type wording matches the PubMed record type; (b) each PMID matches the paper named in the expert-cite line; (c) each concrete claim traces to that cited record, not to a different paper.
+
+CITATIONS (strict — one paper, one PMID link; must satisfy Contentenator rules above)
 - Include at most 3 PubMed citations total across the article, all in Dr. Tabibi Expert Insight expert-cite lines only. Use them only for the strongest mechanistic or clinical claims.
 - A real citation is a specific peer-reviewed paper (known authors, journal, year), not a keyword search. PubMed search URLs are forbidden: any href containing pubmed.ncbi.nlm.nih.gov/?term= (or other query-string search) is unacceptable — it is not stable, not verifiable, and useless to readers and fact-checkers.
 - Required link pattern only: a single PubMed record page using the numeric PMID in the path — https://pubmed.ncbi.nlm.nih.gov/31860793/ style (digits only; no ?term=, no /pubmed/ search, no invented paths).
@@ -235,17 +260,18 @@ LEGAL FOOTER — HARD REQUIREMENT (never omit; always last substantive block of 
 
 OUTPUT CONTRACT FOR THIS TOOL
 - Return ARTICLE BODY FRAGMENT in valid HTML only (no markdown/code fences). Do not output a full HTML document, no <!DOCTYPE>, no <html>, no <head>, no site-wide stylesheet.
-- FAQ block: use the Bible FAQ wrapper so Inter applies (inherited from the outer div font-family). Expert Insight, product, amber drug-interaction disclaimer (when triggered), Sources, and legal footer: use inline style=\"...\" so WordPress does not need theme CSS for those blocks; every font-family stack must start with Inter. Do not rely on class names for appearance for styled blocks (classes optional; styles are authoritative).
+- FAQ block: use the Bible FAQ wrapper so Inter applies (inherited from the outer div font-family). Product, amber drug-interaction disclaimer (when triggered), Sources, and legal footer: use inline style=\"...\" so WordPress does not need theme CSS; font-family uses the full Inter-led stack from their templates. Expert Insight: class=\"expert-box\" on the outer wrapper; inside that subtree every element MUST use font-family:Inter,sans-serif!important (see Bible template) — no system-ui, Roboto, or other named fonts.
 - Completeness (critical): Always finish the last sentence, close all open tags, complete every FAQ answer. Article foot order: FAQ → optional amber drug-interaction box if interaction topics apply → Sources (only Expert Insight expert-cite PMIDs, full citations) or omit Sources if none → legal footer with the exact required opening sentence plus 911/ER routing. Never omit the legal footer. Never stop mid-word or mid-sentence. If you are tight on length, shorten FAQ answers or body sections — never omit the legal footer or truncate the closing paragraph.
 - Do not output separate SEO BLOCK, EDITOR NOTES, or SEO LEAD NOTES sections in this API response.
 
 QUALITY SELF-CHECK BEFORE RETURN
 - Intro opens with real tension/question.
-- Expert Insight: every Tabibi block uses the EXACT inline-styled template from the Bible (outer div with margin/padding/green panel; pill + name row; two <p> with inline styles; expert-cite with inline styles and PMID <a> with inline link color); voice follows Tabibi positioning rules.
+- Expert Insight: every Tabibi block uses the EXACT template from the Bible (outer div with class=\"expert-box\" plus margin/padding/green panel styles; pill + name row; two <p> with inline styles; expert-cite with inline styles and PMID <a>); every node inside class expert-box uses font-family:Inter,sans-serif!important — no other named fonts; voice follows Tabibi positioning rules.
+- Contentenator (Expert Insight / YMYL): study-type language matches each cited paper's actual publication type on PubMed; every PMID is verified against that paper (no invented, guessed, or unrelated PMIDs); every specific finding cited traces to the same PMID in that box, not to a different paper or only to a review's discussion of another study.
 - At most 3 PubMed PMID links total; each appears only in Expert Insight expert-cite lines and again in Sources (same set — no extra Sources); each href uses https://pubmed.ncbi.nlm.nih.gov/ digits path only; no pubmed search URLs; no other external domains besides those PMIDs and internal links from the candidate list.
 - Primary keyword is not forced into the first sentence of the intro or into any heading.
 - Internal links use precise anchors and real URLs from the provided list.
-- Sources lists only Expert Insight expert-cite papers; FAQ and legal footer follow the Bible (Inter everywhere; FAQ uses Bible wrapper + h2/h3/p; Expert Insight uses Bible template with Inter on all lines).
+- Sources lists only Expert Insight expert-cite papers; FAQ and legal footer follow the Bible (Inter everywhere; FAQ uses Bible wrapper + h2/h3/p; Expert Insight uses Bible template with Inter,sans-serif!important on every line/element in the box).
 - No disease-treatment claims.
 If any check fails, revise before returning output.`;
 }
@@ -271,9 +297,11 @@ export async function postGenerateContent(request: Request, toolScope: WPToolSco
       typeof productTypeForLinks === "string" && productTypeForLinks.trim().length > 0
         ? productTypeForLinks.trim()
         : "";
+    const siteOrigin = (site.url ?? "").replace(/\/$/, "");
     const linkLibraryOpts = {
       minPostPageSlots: 1 as const,
       maxPostPageSlots: 3 as const,
+      ...(siteOrigin ? { siteOriginForProductImages: siteOrigin } : {}),
     };
     const candidateOpts =
       toolScope === WP_TOOL_SCOPE.weedComContentProduction
@@ -289,31 +317,59 @@ export async function postGenerateContent(request: Request, toolScope: WPToolSco
           ? { ...linkLibraryOpts, productTypeHint: productHint, productLinkSlots: 2 }
           : linkLibraryOpts;
 
-    let internalLinks = await getCandidatesFromLibrary(
-      site.id,
-      keywords,
-      title,
-      INTERNAL_LINK_CANDIDATES_FOR_PROMPT,
-      candidateOpts
-    );
+    const siteUrlForOriginFilter = site.url ?? "";
+
+    const loadInternalLinksFromLibrary = () =>
+      getCandidatesFromLibrary(site.id, keywords, title, INTERNAL_LINK_CANDIDATES_FOR_PROMPT, {
+        ...candidateOpts,
+        siteUrlForOriginFilter,
+      });
+
+    let internalLinks = await loadInternalLinksFromLibrary();
+
+    if (internalLinks.length < LIBRARY_USE_MIN) {
+      try {
+        await syncInternalLinksFromWordPress(site.id, toolScope);
+        if (toolScope === WP_TOOL_SCOPE.weedComContentProduction) {
+          try {
+            await syncProductInternalLinksFromWordPress(site.id, toolScope);
+          } catch (e) {
+            console.warn("[generate-content] Product link library sync skipped:", errorMessage(e));
+          }
+        }
+        internalLinks = await loadInternalLinksFromLibrary();
+      } catch (e) {
+        console.warn("[generate-content] Internal link library sync failed:", errorMessage(e));
+      }
+    }
+
     if (internalLinks.length < LIBRARY_USE_MIN) {
       const posts = await getPosts(site, 100);
       if (toolScope === WP_TOOL_SCOPE.weedComContentProduction) {
         try {
           const products = await fetchAllProductsForLinkLibrary(site);
-          internalLinks = pickCandidatesFromLivePostsAndProducts(
-            posts,
-            products,
-            keywords,
-            title,
-            INTERNAL_LINK_CANDIDATES_FOR_PROMPT,
-            candidateOpts
+          internalLinks = filterLinkCandidatesToSiteOrigin(
+            pickCandidatesFromLivePostsAndProducts(
+              posts,
+              products,
+              keywords,
+              title,
+              INTERNAL_LINK_CANDIDATES_FOR_PROMPT,
+              candidateOpts
+            ),
+            siteUrlForOriginFilter
           );
         } catch {
-          internalLinks = pickCandidatesFromLivePosts(posts, keywords, title, INTERNAL_LINK_CANDIDATES_FOR_PROMPT);
+          internalLinks = filterLinkCandidatesToSiteOrigin(
+            pickCandidatesFromLivePosts(posts, keywords, title, INTERNAL_LINK_CANDIDATES_FOR_PROMPT),
+            siteUrlForOriginFilter
+          );
         }
       } else {
-        internalLinks = pickCandidatesFromLivePosts(posts, keywords, title, INTERNAL_LINK_CANDIDATES_FOR_PROMPT);
+        internalLinks = filterLinkCandidatesToSiteOrigin(
+          pickCandidatesFromLivePosts(posts, keywords, title, INTERNAL_LINK_CANDIDATES_FOR_PROMPT),
+          siteUrlForOriginFilter
+        );
       }
     }
 
@@ -358,16 +414,17 @@ ${
     const editorialBlock =
       editorialCandidates.length > 0
         ? editorialCandidates.map(formatEditorialLine).join("\n")
-        : "(none in this candidate set — use other internal URLs if listed below.)";
+        : "(none — do not invent internal URLs. In Site manager, run **Sync internal links** (and product sync if needed), then regenerate.)";
     const productBlock =
       productCandidates.length > 0
         ? productCandidates.map(formatProductLine).join("\n")
         : "(none — product cards only when URLs appear here.)";
     const linksText = `Linking rules:
+- **URLs are canonical:** copy every href **exactly** from the lists below (full URL including https:// and path). Do not invent paths, guess slugs, or "fix" URLs — only use strings that appear under Editorial posts and pages / Products.
 - Main body: embed at least 1 and at most 3 <a> links to **editorial** post/page URLs from "Editorial posts and pages" (most relevant first). Do not skip editorial links in favor of product links only.
 - Products: use "Products" for Shop Now cards and commerce-style mentions per scope rules; product links do not replace required editorial post/page links.
 
-Editorial posts and pages:
+Editorial posts and pages (from your site link library — these URLs are live on the site):
 ${editorialBlock}
 
 Products (Shop Now / commerce):
@@ -391,7 +448,7 @@ Keywords: ${keywords.join(", ")}${briefExtra ? `\n\n${briefExtra}` : ""}
 Internal link candidates (editorial: pick 1–3 post/page URLs for in-body <a> links—required when the editorial list is non-empty; products: separate Shop Now / commerce usage; each URL at most once):
 ${linksText}
 
-Write the full HTML blog post.${toolScope === WP_TOOL_SCOPE.weedComContentProduction ? "" : " Include the FAQ block as specified (1 or 2 FAQ subsections by topic fit, bullets in answers where it helps)."} Remember: no em dash character anywhere in the HTML. Do not output an <h1>; the post title is set only in WordPress. Start with <p> or <h2>.${toolScope === WP_TOOL_SCOPE.weedComContentProduction ? " Every text node, heading, and block (body, Expert Insight including quotes and citations, FAQ, cards, Sources, footers): Inter first in font-family per Bible. FAQ: Bible outer wrapper + <h2>Frequently asked questions</h2> + <h3>/<p> pairs. Double-check every internal link: when the Editorial posts and pages list is non-empty, include at least one and up to three <a> links to those post/page URLs in the main body (most relevant first); Shop Now product blocks are separate and do not satisfy the editorial link requirement. Anchor text must be specific (never rely on 'this guide' / 'this breakdown' style phrasing). Product names must follow a clear contextual lead-in. Do not force the primary keyword into the opening of the first paragraph or into headings. At most 3 PubMed citations total; PMIDs only in Expert Insight expert-cite lines; each must use a verified PMID article URL (https://pubmed.ncbi.nlm.nih.gov/<digits>/) — never PubMed ?term= search links — with author/journal/year in adjacent text. Sources at the foot must list ONLY those same Expert Insight papers (no extra sources). Every Dr. Tabibi Expert Insight block and every product card must use the Bible templates with full inline style=\"...\" attributes (WordPress will not load custom CSS for these). When medication interactions are relevant, include the amber drug-interaction disclaimer box (⚕ icon) from the Bible. End with Sources (if any expert-cites) and the legal footer — required verbatim opening \"For adults 21+ only. Cannabis laws vary by state.\" plus emergency routing; never omit. The article must end completely — never stop mid-sentence." : ""}`;
+Write the full HTML blog post.${toolScope === WP_TOOL_SCOPE.weedComContentProduction ? "" : " Include the FAQ block as specified (1 or 2 FAQ subsections by topic fit, bullets in answers where it helps)."} Remember: no em dash character anywhere in the HTML. Do not output an <h1>; the post title is set only in WordPress. Start with <p> or <h2>.${toolScope === WP_TOOL_SCOPE.weedComContentProduction ? " Body, FAQ, cards, Sources, footers: Inter-led font stack per Bible. Expert Insight (.expert-box): every opening tag in that block must include font-family:Inter,sans-serif!important (including PMID <a>) so paste/theme cannot override. FAQ: Bible outer wrapper + <h2>Frequently asked questions</h2> + <h3>/<p> pairs. Double-check every internal link: when the Editorial posts and pages list is non-empty, include at least one and up to three <a> links to those post/page URLs in the main body (most relevant first); Shop Now product blocks are separate and do not satisfy the editorial link requirement. Anchor text must be specific (never rely on 'this guide' / 'this breakdown' style phrasing). Product names must follow a clear contextual lead-in. Do not force the primary keyword into the opening of the first paragraph or into headings. Before finalizing: run Contentenator on every Expert Insight box (Bible v7) — study-type labels match the PubMed record type; each PMID matches that paper (no unrelated or fabricated IDs); specific numeric or outcome claims trace to that same PMID, not a different paper or a review-only mention of another study. At most 3 PubMed citations total; PMIDs only in Expert Insight expert-cite lines; each must use a verified PMID article URL (https://pubmed.ncbi.nlm.nih.gov/<digits>/) — never PubMed ?term= search links — with author/journal/year in adjacent text. Sources at the foot must list ONLY those same Expert Insight papers (no extra sources). Every Dr. Tabibi Expert Insight block and every product card must use the Bible templates with full inline style=\"...\" attributes (WordPress will not load custom CSS for these). When medication interactions are relevant, include the amber drug-interaction disclaimer box (⚕ icon) from the Bible. End with Sources (if any expert-cites) and the legal footer — required verbatim opening \"For adults 21+ only. Cannabis laws vary by state.\" plus emergency routing; never omit. The article must end completely — never stop mid-sentence." : ""}`;
 
     const raw = await callClaude(systemPrompt, userMessage, {
       maxTokens: maxTokensForArticleHtml(wordCount),
@@ -400,6 +457,7 @@ Write the full HTML blog post.${toolScope === WP_TOOL_SCOPE.weedComContentProduc
 
     if (toolScope === WP_TOOL_SCOPE.weedComContentProduction) {
       content = await finalizeWeedLearnHtml(content, title, keywords);
+      content = lockExpertBoxTypography(content);
     }
 
 

@@ -1,0 +1,29 @@
+---
+description: Weed.com Learn Layer 1 — Expert Insight Contentenator rules and Rank Math focus keyword behavior
+globs:
+  - lib/contentProduction/generateContentPost.ts
+  - lib/contentProduction/publishPost.ts
+  - app/api/weed-com-content-production/**/*.ts
+---
+
+# Weed.com content production (Learn / Layer 1)
+
+## Rank Math (publish)
+
+- **Weed.com** (`WP_TOOL_SCOPE.weedComContentProduction`): Rank Math **focus keyword** is set from the **WordPress post title** (trimmed, max 191 chars), with fallback to the first editorial keyword if the title is empty. See `rankMathFocusKeywordFromTitle` in `lib/contentProduction/publishPost.ts`.
+- **Other scopes** (e.g. green.org): focus keyword uses **`pickFocusKeyphrase`** (first keyword, else title snippet) for Rank Math.
+
+## Expert Insight — Contentenator (Layer 1, before Dr. Tabibi / Layer 2)
+
+All Layer 1 Weed.com Learn prompts live in `weedLayer1BiblePrompt()` in `lib/contentProduction/generateContentPost.ts` (Bible v7+). Before any draft goes to human or Dr. Tabibi review, the model must enforce:
+
+1. **Study-type accuracy** — Words like trial, RCT, review, meta-analysis, cohort, etc. must match the **actual** publication type on PubMed for the cited PMID.
+2. **PMID verification** — Every PMID must resolve to the **same** paper as the expert-cite line; no invented, guessed, or unrelated PMIDs.
+3. **Claim-to-citation match** — Specific findings (doses, outcomes, effect language) must be supported by **that** PMID, not by a primary study only discussed inside a cited review.
+
+When editing the Bible string, keep these three gates aligned with the **CONTENTENATOR** section, **CITATIONS**, and **QUALITY SELF-CHECK** blocks in the same file. Also mirror key points in `brandAddendumForScope` (weed) and the Weed branch of the generate-content `userMessage` where applicable.
+
+## Expert Insight HTML hook and typography
+
+- The outer wrapper of each Expert Insight block must keep **`class="expert-box"`** on the green panel `<div>` (see Bible template in `weedLayer1BiblePrompt`). Themes can target `.expert-box` for extra CSS; inline styles remain the Layer 1 default.
+- **Inside `.expert-box` only:** every text element must use **`font-family: Inter,sans-serif!important`** on its inline `style` (Inter plus the generic `sans-serif` keyword; `!important` beats pasted Word spans and many theme rules). Do not use `system-ui`, `-apple-system`, `Segoe UI`, `Roboto`, or other named stacks — including on the PMID `<a>`. Publish/generate runs `lockExpertBoxTypography` in `lib/postHtml.ts` to strip foreign `font-family` / `font` inside each `.expert-box` and re-apply the Inter lock on every opening tag.
