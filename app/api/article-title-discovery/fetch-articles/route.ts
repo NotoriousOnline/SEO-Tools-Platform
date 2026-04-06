@@ -1,127 +1,65 @@
 import { NextResponse } from "next/server";
-import { RSS_FEEDS } from "@/lib/rssFeeds";
+import { fetchDiscoveryArticlesFromRss } from "@/lib/articleDiscoveryRss";
+import type { ArticleDiscoveryPayload, FetchArticlesResponse } from "@/lib/articleDiscoveryTypes";
+import {
+  fetchInoreaderStreamArticles,
+  isInoreaderConfigured,
+} from "@/lib/inoreaderClient";
 
-/** Avoid prerendering at build time (RSS calls fail or churn and clutter CI logs). */
+/** Avoid prerendering at build time (RSS / Inoreader calls fail or churn and clutter CI logs). */
 export const dynamic = "force-dynamic";
 
-type Article = {
-  title: string;
-  url: string;
-  source: string;
-  pubDate: string;
-};
-
-function stripCdata(text: string): string {
-  return text
-    .replace(/<!\[CDATA\[/g, "")
-    .replace(/\]\]>/g, "")
-    .trim();
+function readFallbackFlag(): boolean {
+  const v = (process.env.INOREADER_FALLBACK_TO_RSS ?? "true").trim().toLowerCase();
+  return v !== "false" && v !== "0";
 }
-
-function extractTagContent(xml: string, tagName: string): string | null {
-  const regex = new RegExp(`<${tagName}[^>]*>([\\s\\S]*?)<\\/${tagName}>`, "i");
-  const match = xml.match(regex);
-  if (!match) return null;
-  return stripCdata(match[1].trim());
-}
-
-function extractLink(itemXml: string): string | null {
-  const linkContent = extractTagContent(itemXml, "link");
-  if (linkContent && linkContent.startsWith("http")) return linkContent;
-  const hrefMatch = itemXml.match(/<link[^>]+href=["']([^"']+)["']/i);
-  return hrefMatch ? hrefMatch[1] : linkContent;
-}
-
-function parseItemsFromXml(xml: string, source: string): Article[] {
-  const articles: Article[] = [];
-  const itemRegex = /<item[^>]*>([\s\S]*?)<\/item>/gi;
-  let match;
-  while ((match = itemRegex.exec(xml)) !== null) {
-    const itemXml = match[1];
-    const title = extractTagContent(itemXml, "title");
-    const url = extractLink(itemXml);
-    const pubDate = extractTagContent(itemXml, "pubDate");
-    if (title && url) {
-      articles.push({
-        title,
-        url,
-        source,
-        pubDate: pubDate ?? "",
-      });
-    }
-  }
-  return articles;
-}
-
-const PRIORITY_FEEDS = ["ENN", "ENN Climate", "ENN Energy", "ENN Pollution", "The Guardian Environment"];
 
 export async function GET() {
-  const bySource: Record<string, Article[]> = {};
-  let feedsSucceeded = 0;
+  const wantInoreader = isInoreaderConfigured();
+  const streamId = process.env.INOREADER_STREAM_ID?.trim() ?? "";
+  const fallbackRss = readFallbackFlag();
 
-  // Fetch ENN and Guardian first, then others
-  const fetchOrder = [
-    ...RSS_FEEDS.filter((f) => PRIORITY_FEEDS.includes(f.name)),
-    ...RSS_FEEDS.filter((f) => !PRIORITY_FEEDS.includes(f.name)),
-  ];
+  let articles: ArticleDiscoveryPayload[] = [];
+  let source: FetchArticlesResponse["source"] = "rss";
+  let inoreaderError: string | undefined;
 
-  for (const feed of fetchOrder) {
+  if (wantInoreader && streamId) {
     try {
-      const res = await fetch(feed.url, {
-        headers: { "User-Agent": "SEO-Tools-Platform/1.0" },
-      });
-      if (!res.ok) throw new Error(`HTTP ${res.status}`);
-      const xml = await res.text();
-      const articles = parseItemsFromXml(xml, feed.name);
-      bySource[feed.name] = articles.sort((a, b) => {
-        const dateA = a.pubDate ? new Date(a.pubDate).getTime() : 0;
-        const dateB = b.pubDate ? new Date(b.pubDate).getTime() : 0;
-        return dateB - dateA;
-      });
-      feedsSucceeded++;
+      const raw = await fetchInoreaderStreamArticles(streamId, 40);
+      articles = raw.slice(0, 20).map(({ title, url, source: src }) => ({
+        title,
+        url,
+        source: src,
+      }));
+      source = "inoreader";
+      const sidLog = streamId.length > 90 ? `${streamId.slice(0, 90)}…` : streamId;
+      console.log(`[fetch-articles] Inoreader stream "${sidLog}" → ${articles.length} articles`);
     } catch (err) {
-      console.error(`[fetch-articles] Feed ${feed.name} failed:`, err);
+      inoreaderError = err instanceof Error ? err.message : String(err);
+      console.error("[fetch-articles] Inoreader failed:", inoreaderError);
+      if (fallbackRss) {
+        articles = await fetchDiscoveryArticlesFromRss();
+        source = "inoreader+rss";
+      } else {
+        return NextResponse.json(
+          {
+            articles: [],
+            source: "inoreader",
+            inoreaderError,
+          } satisfies FetchArticlesResponse,
+          { status: 502 }
+        );
+      }
     }
+  } else {
+    articles = await fetchDiscoveryArticlesFromRss();
+    source = "rss";
+    console.log(`[fetch-articles] RSS → ${articles.length} articles`);
   }
 
-  // Build result: ENN pool first (up to 10), then Guardian (up to 10), then others until 20
-  const result: Article[] = [];
-  const addFrom = (source: string, max: number) => {
-    const articles = bySource[source] ?? [];
-    for (let i = 0; i < Math.min(max, articles.length) && result.length < 20; i++) {
-      result.push(articles[i]);
-    }
-  };
-  const ennSources = ["ENN", "ENN Climate", "ENN Energy", "ENN Pollution"];
-  const ennPool = ennSources.flatMap((s) => bySource[s] ?? []).sort((a, b) => {
-    const dateA = a.pubDate ? new Date(a.pubDate).getTime() : 0;
-    const dateB = b.pubDate ? new Date(b.pubDate).getTime() : 0;
-    return dateB - dateA;
-  });
-  for (let i = 0; i < Math.min(10, ennPool.length) && result.length < 20; i++) {
-    result.push(ennPool[i]);
-  }
-  addFrom("The Guardian Environment", 10);
-  const others = Object.entries(bySource)
-    .filter(([name]) => !PRIORITY_FEEDS.includes(name))
-    .flatMap(([, articles]) => articles)
-    .sort((a, b) => {
-      const dateA = a.pubDate ? new Date(a.pubDate).getTime() : 0;
-      const dateB = b.pubDate ? new Date(b.pubDate).getTime() : 0;
-      return dateB - dateA;
-    });
-  for (const a of others) {
-    if (result.length >= 20) break;
-    result.push(a);
-  }
-
-  const top20 = result.slice(0, 20).map(({ title, url, source }) => ({
-    title,
-    url,
+  return NextResponse.json({
+    articles,
     source,
-  }));
-
-  console.log(`Fetched ${top20.length} articles from ${feedsSucceeded} feeds`);
-
-  return NextResponse.json(top20);
+    ...(inoreaderError ? { inoreaderError } : {}),
+  } satisfies FetchArticlesResponse);
 }

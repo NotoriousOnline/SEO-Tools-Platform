@@ -33,6 +33,7 @@ const SOURCE_PILL_NAMES: Record<string, string> = {
   "The Guardian Environment": "The Guardian",
   "Earth Day": "Earth Day",
   "Yale E360": "Yale E360",
+  Inoreader: "Inoreader",
 };
 
 type ResultItem = {
@@ -42,6 +43,13 @@ type ResultItem = {
   source_name: string;
 };
 
+type DiscoveryInfo = {
+  primarySource: "inoreader" | "rss";
+  rssFeedCount: number;
+  inoreaderReady: boolean;
+  inoreaderDisplayLabel: string | null;
+};
+
 export default function ArticleTitleDiscoveryTool() {
   const [loading, setLoading] = useState(false);
   const [success, setSuccess] = useState<string | null>(null);
@@ -49,6 +57,7 @@ export default function ArticleTitleDiscoveryTool() {
   const [results, setResults] = useState<ResultItem[]>([]);
   const [lastRun, setLastRun] = useState<Date | null>(null);
   const [countdown, setCountdown] = useState("");
+  const [discoveryInfo, setDiscoveryInfo] = useState<DiscoveryInfo | null>(null);
 
   useEffect(() => {
     const tick = () => {
@@ -59,6 +68,24 @@ export default function ArticleTitleDiscoveryTool() {
     tick();
     const id = setInterval(tick, 1000);
     return () => clearInterval(id);
+  }, []);
+
+  useEffect(() => {
+    let cancelled = false;
+    void (async () => {
+      try {
+        const res = await fetch("/api/article-title-discovery/info");
+        const data = (await res.json()) as DiscoveryInfo;
+        if (!cancelled && res.ok && data?.primarySource) {
+          setDiscoveryInfo(data);
+        }
+      } catch {
+        /* ignore */
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
   const handleRun = async () => {
@@ -89,9 +116,16 @@ export default function ArticleTitleDiscoveryTool() {
         <span className="inline-flex items-center rounded-full bg-violet-100 px-3 py-0.5 text-xs font-medium text-violet-800">
           Daily 1 PM ET
         </span>
-        <span className="inline-flex items-center rounded-full bg-slate-100 px-3 py-0.5 text-xs font-medium text-slate-700">
-          {RSS_FEEDS.length} Sources
-        </span>
+        {discoveryInfo?.primarySource === "inoreader" ? (
+          <span className="inline-flex items-center rounded-full bg-sky-100 px-3 py-0.5 text-xs font-medium text-sky-900">
+            Inoreader
+            {discoveryInfo?.inoreaderDisplayLabel ? ` · ${discoveryInfo.inoreaderDisplayLabel}` : ""}
+          </span>
+        ) : (
+          <span className="inline-flex items-center rounded-full bg-slate-100 px-3 py-0.5 text-xs font-medium text-slate-700">
+            {discoveryInfo?.rssFeedCount ?? RSS_FEEDS.length} RSS sources
+          </span>
+        )}
         <span className="inline-flex items-center gap-1.5 rounded-full border border-slate-200 bg-white px-3 py-1 text-xs font-mono font-medium text-slate-700">
           <span className="text-slate-500">Next run in:</span>
           {countdown || "—"}
@@ -100,17 +134,35 @@ export default function ArticleTitleDiscoveryTool() {
 
       {/* Sources list */}
       <div>
-        <h2 className="text-sm font-medium text-slate-500">RSS Sources</h2>
-        <div className="mt-2 flex flex-wrap gap-2">
-          {RSS_FEEDS.map((feed) => (
-            <span
-              key={feed.name}
-              className="inline-flex items-center rounded-full border border-slate-200 bg-white px-3 py-1 text-xs text-slate-600"
-            >
-              {SOURCE_PILL_NAMES[feed.name] ?? feed.name}
-            </span>
-          ))}
-        </div>
+        <h2 className="text-sm font-medium text-slate-500">
+          {discoveryInfo?.primarySource === "inoreader" ? "Article sources" : "RSS sources"}
+        </h2>
+        {discoveryInfo?.primarySource === "inoreader" ? (
+          <div className="mt-2 space-y-2 text-sm text-slate-600">
+            <p>
+              Articles are loaded from your{" "}
+              <strong className="font-medium text-slate-800">Inoreader</strong> folder/stream (
+              {discoveryInfo?.inoreaderDisplayLabel ?? "configured stream"}). Add or remove blogs in
+              Inoreader; the next run picks up the newest items from that stream.
+            </p>
+            <p className="text-xs text-slate-500">
+              If Inoreader fails, the app can fall back to built-in RSS feeds (see{" "}
+              <code className="rounded bg-slate-100 px-1">INOREADER_FALLBACK_TO_RSS</code> in{" "}
+              <code className="rounded bg-slate-100 px-1">.env.example</code>).
+            </p>
+          </div>
+        ) : (
+          <div className="mt-2 flex flex-wrap gap-2">
+            {RSS_FEEDS.map((feed) => (
+              <span
+                key={feed.name}
+                className="inline-flex items-center rounded-full border border-slate-200 bg-white px-3 py-1 text-xs text-slate-600"
+              >
+                {SOURCE_PILL_NAMES[feed.name] ?? feed.name}
+              </span>
+            ))}
+          </div>
+        )}
       </div>
 
       {/* Manual run */}

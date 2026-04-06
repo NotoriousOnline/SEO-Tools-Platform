@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
-import { serverLog } from "@/lib/serverLog";
+import type { ArticleDiscoveryPayload, FetchArticlesResponse } from "@/lib/articleDiscoveryTypes";
 import { describeFetchError, serverFetchOrigin } from "@/lib/serverFetch";
+import { serverLog } from "@/lib/serverLog";
 
 export const maxDuration = 120;
 
@@ -38,8 +39,15 @@ export async function GET(request: Request) {
       { status: 502 }
     );
   }
-  const articles = await fetchRes.json();
-  console.log("[article-title-discovery/run] Fetched", articles.length, "articles");
+  const fetchPayload = (await fetchRes.json()) as FetchArticlesResponse | ArticleDiscoveryPayload[];
+  const articles: ArticleDiscoveryPayload[] = Array.isArray(fetchPayload)
+    ? fetchPayload
+    : (fetchPayload.articles ?? []);
+  const fetchSource = Array.isArray(fetchPayload) ? "rss" : fetchPayload.source;
+  if (!Array.isArray(fetchPayload) && fetchPayload.inoreaderError) {
+    console.warn("[article-title-discovery/run] fetch-articles note:", fetchPayload.inoreaderError);
+  }
+  console.log("[article-title-discovery/run] Fetched", articles.length, "articles (source:", fetchSource, ")");
 
   if (articles.length === 0) {
     return NextResponse.json({
