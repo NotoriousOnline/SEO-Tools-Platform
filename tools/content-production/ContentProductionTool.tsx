@@ -93,6 +93,9 @@ export function ContentProductionTool({
   const [generatedContent, setGeneratedContent] = useState<string | null>(null);
   const [generatedImages, setGeneratedImages] = useState<ImageItem[] | null>(null);
   const [internalLinksUsed, setInternalLinksUsed] = useState<InternalLink[]>([]);
+  const [contentRefinementInstructions, setContentRefinementInstructions] = useState("");
+  const [contentRefining, setContentRefining] = useState(false);
+  const [contentRefineError, setContentRefineError] = useState<string | null>(null);
   const [contentApproved, setContentApproved] = useState(false);
   const [imagesApproved, setImagesApproved] = useState(false);
   const [approvedContent, setApprovedContent] = useState<string | null>(null);
@@ -699,6 +702,73 @@ export function ContentProductionTool({
     }
   };
 
+  const handleRegenerateWithInstructions = async () => {
+    if (!selectedSite || !title.trim() || keywords.length === 0) return;
+    const instructions = contentRefinementInstructions.trim();
+    if (!instructions) return;
+
+    const existingHtml =
+      contentApproved && approvedContent
+        ? approvedContent.trim()
+        : (contentEditableRef.current?.innerHTML?.trim() ||
+            generatedContent?.trim() ||
+            "");
+
+    if (!existingHtml) {
+      setContentRefineError("No HTML to refine.");
+      return;
+    }
+
+    setContentRefineError(null);
+    setContentRefining(true);
+
+    try {
+      const contentRes = await fetch(`${api}/generate-content`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          siteId: selectedSite.id,
+          title: title.trim(),
+          keywords,
+          wordCount,
+          existingHtml,
+          refinementInstructions: instructions,
+          ...(editorialBrief.trim() ? { editorialBrief: editorialBrief.trim() } : {}),
+          ...(manualBriefFields && contentAngle.trim() ? { contentAngle: contentAngle.trim() } : {}),
+          ...(manualBriefFields && productTypeForLinks.trim()
+            ? { productTypeForLinks: productTypeForLinks.trim() }
+            : {}),
+        }),
+      });
+      const contentData = (await contentRes.json()) as {
+        content?: string;
+        internalLinksUsed?: InternalLink[];
+        error?: string;
+      };
+
+      if (!contentRes.ok) {
+        setContentRefineError(contentData.error ?? "Refinement failed");
+        return;
+      }
+
+      if (typeof contentData.content !== "string") {
+        setContentRefineError("Invalid response from server");
+        return;
+      }
+
+      setGeneratedContent(contentData.content);
+      setInternalLinksUsed(contentData.internalLinksUsed ?? []);
+      setContentApproved(false);
+      setApprovedContent(null);
+      setContentRefinementInstructions("");
+      setContentRefineError(null);
+    } catch (err) {
+      setContentRefineError(err instanceof Error ? err.message : "Refinement failed");
+    } finally {
+      setContentRefining(false);
+    }
+  };
+
   const handleGenerateImages = useCallback(async () => {
     const content = approvedContent ?? generatedContent;
     if (!content || !title.trim() || keywords.length === 0) return;
@@ -753,7 +823,7 @@ export function ContentProductionTool({
     }
   }, [approvedContent, generatedContent, title, keywords, wordCount]);
 
-  const section2Unlocked = contentLoading || !!generatedContent;
+  const section2Unlocked = contentLoading || contentRefining || !!generatedContent;
   const hasContent = !!generatedContent || !!contentApproved;
   const section3Unlocked = hasContent;
   const section4Unlocked = (contentApproved && imagesApproved) || publishing;
@@ -1416,18 +1486,27 @@ export function ContentProductionTool({
             </p>
           ) : generatedContent || contentApproved ? (
             <div className="space-y-4">
+              {contentRefining && (
+                <p className="rounded border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-900">
+                  Revising article HTML with your instructions…
+                </p>
+              )}
               {contentApproved ? (
                 <div
-                  className="space-y-4 text-sm [&_h1]:text-xl [&_h1]:font-bold [&_h2]:text-lg [&_h2]:font-semibold [&_h3]:text-base [&_h3]:font-medium [&_p]:leading-relaxed"
+                  className={`space-y-4 text-sm [&_h1]:text-xl [&_h1]:font-bold [&_h2]:text-lg [&_h2]:font-semibold [&_h3]:text-base [&_h3]:font-medium [&_p]:leading-relaxed ${
+                    contentRefining ? "pointer-events-none opacity-60" : ""
+                  }`}
                   dangerouslySetInnerHTML={{ __html: approvedContent ?? "" }}
                 />
               ) : (
                 <div
                   ref={contentEditableRef}
-                  contentEditable
+                  contentEditable={!contentRefining}
                   suppressContentEditableWarning
                   onInput={handleContentInput}
-                  className="min-h-[200px] space-y-4 text-sm outline-none [&_h1]:text-xl [&_h1]:font-bold [&_h2]:text-lg [&_h2]:font-semibold [&_h3]:text-base [&_h3]:font-medium [&_p]:leading-relaxed"
+                  className={`min-h-[200px] space-y-4 text-sm outline-none [&_h1]:text-xl [&_h1]:font-bold [&_h2]:text-lg [&_h2]:font-semibold [&_h3]:text-base [&_h3]:font-medium [&_p]:leading-relaxed ${
+                    contentRefining ? "pointer-events-none opacity-60" : ""
+                  }`}
                 />
               )}
               <p className="text-xs text-slate-500">Word count: {contentWordCount}</p>
@@ -1450,11 +1529,46 @@ export function ContentProductionTool({
                   </ul>
                 </div>
               )}
+              <div className="rounded-lg border border-amber-100 bg-amber-50/50 p-3">
+                <label className="mb-1 block text-xs font-medium text-slate-700">
+                  Regenerate with instructions
+                </label>
+                <p className="mb-2 text-xs text-slate-600">
+                  After the draft exists, describe edits (tone, sections, links, FAQ, Expert Insight). The model
+                  revises the HTML above; images are not regenerated automatically.
+                </p>
+                <textarea
+                  value={contentRefinementInstructions}
+                  onChange={(e) => setContentRefinementInstructions(e.target.value)}
+                  rows={3}
+                  placeholder="e.g. Shorten the intro; add one FAQ about dosage; keep internal links."
+                  disabled={contentRefining || contentLoading}
+                  className="mb-2 w-full rounded border border-slate-200 bg-white px-3 py-2 text-sm text-slate-800 placeholder:text-slate-400 disabled:opacity-60"
+                />
+                <button
+                  type="button"
+                  onClick={handleRegenerateWithInstructions}
+                  disabled={
+                    contentRefining ||
+                    contentLoading ||
+                    !contentRefinementInstructions.trim() ||
+                    !title.trim() ||
+                    keywords.length === 0
+                  }
+                  className="rounded-lg border border-amber-300 bg-white px-4 py-2 text-sm font-medium text-amber-900 hover:bg-amber-50 disabled:cursor-not-allowed disabled:opacity-60"
+                >
+                  {contentRefining ? "Regenerating…" : "Regenerate HTML"}
+                </button>
+                {contentRefineError && (
+                  <p className="mt-2 text-xs text-red-600">{contentRefineError}</p>
+                )}
+              </div>
               {!contentApproved && (
                 <button
                   type="button"
                   onClick={handleContentApprove}
-                  className="rounded-lg bg-teal-600 px-4 py-2 text-sm font-medium text-white hover:bg-teal-700"
+                  disabled={contentRefining}
+                  className="rounded-lg bg-teal-600 px-4 py-2 text-sm font-medium text-white hover:bg-teal-700 disabled:cursor-not-allowed disabled:opacity-60"
                 >
                   Content approved
                 </button>

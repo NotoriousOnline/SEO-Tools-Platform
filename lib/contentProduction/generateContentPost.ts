@@ -11,12 +11,33 @@ import {
   syncProductInternalLinksFromWordPress,
   type LinkCandidate,
 } from "@/lib/siteLinkLibrary";
+import {
+  buildTabibiLibraryUserBlock,
+  selectRelevantTabibiEntries,
+  type TabibiPmidEntry,
+} from "@/lib/tabibiPmidDatabase";
+import { appendTabibiSourcesFooter, pickTabibiSourcesForFooter } from "@/lib/tabibiSourcesFooter";
 import { getSiteById, WP_TOOL_SCOPE, type WPToolScope } from "@/lib/wpSites";
 import { fetchAllProductsForLinkLibrary, getPosts } from "@/lib/wordpressClient";
 
 /** Richer pool for the model + Supabase library when synced. */
 const INTERNAL_LINK_CANDIDATES_FOR_PROMPT = 14;
 const LIBRARY_USE_MIN = 3;
+
+/** Max characters of existing HTML accepted for refinement (existingHtml + refinementInstructions). */
+const MAX_REFINEMENT_HTML_CHARS = 120_000;
+
+const CONTENT_REFINEMENT_SYSTEM_TAIL = `You are editing existing article HTML (refinement pass). The user message contains CURRENT HTML and EDITOR INSTRUCTIONS.
+
+Apply the instructions. Output the full revised article as raw HTML only (no markdown code fences, no triple backticks). Do not output <!DOCTYPE>, <html>, or <h1> (the CMS sets the post title separately).
+Never use the em dash character (Unicode U+2014). Use a spaced hyphen " - " instead.
+
+Preserve valid structure, inline styles, and classes (e.g. expert-box, Inter font rules) unless the instructions require changes. When adding or changing internal links, use only URLs from the Editorial posts and pages / Products lists in the user message when those lists are non-empty.
+
+For Weed.com Learn: keep Expert Insight, FAQ, Sources, and legal footer consistent with the Bible when instructions touch those sections; do not introduce fabricated or mismatched PubMed PMIDs.
+When the user message includes "TABIBI GOLD STANDARD CITATION LIBRARY", every PubMed PMID in Expert Insight must be from that list only. Do not add a Sources block; the server may append Sources from that library.
+
+If instructions would violate citation safety or the Bible, prefer the smallest safe edit (hedge claims, omit unsafe citations) over inventing sources.`;
 
 function replaceEmDashes(html: string): string {
   return html.replace(/\u2014/g, " - ").replace(/\u2013/g, "-");
@@ -37,9 +58,9 @@ The user message has TITLE, KEYWORDS, and the TAIL of an article that stopped be
 
 Output ONLY the continuation to append (do not repeat earlier paragraphs):
 1) If the tail ends inside an open <p> without </p>, write the minimal words to finish the sentence, then </p>.
-2) Then append FAQ (Bible outer div with Inter font-family, <h2>Frequently asked questions</h2>, then each <h3> + <p>) + amber disclaimer + Sources + legal footer. Amber box, Sources, FAQ wrapper, and footer: Bible inline style= templates with Inter for all text; copy style attributes exactly.
+2) Then append FAQ (Bible outer div with Inter font-family, <h2>Frequently asked questions</h2>, then each <h3> + <p>) + amber disclaimer when relevant + legal footer only. Do NOT add a Sources HTML block (the server appends Sources from the Tabibi JSON). Amber box, FAQ wrapper, and footer: Bible inline style= templates with Inter for all text; copy style attributes exactly.
 3) 4-7 FAQ pairs; answers ~28-52 words each.
-4) Sources: full bibliographic lines with PMID links (digits-only pubmed URLs). Any PMID in Sources must match the paper named on that line (no fabricated or mismatched IDs; same Contentenator standard as Layer 1). Legal footer: REQUIRED — must include verbatim "For adults 21+ only. Cannabis laws vary by state." plus 911/emergency room routing in the Bible <p> template. Never omit the legal footer.`;
+4) Legal footer: REQUIRED — must include verbatim "For adults 21+ only. Cannabis laws vary by state." plus 911/emergency room routing in the Bible <p> template. Never omit the legal footer.`;
 
 async function finalizeWeedLearnHtml(
   html: string,
@@ -180,6 +201,7 @@ CITATIONS (strict — one paper, one PMID link; must satisfy Contentenator rules
 - Keep a plain-language clause on study design where it helps (RCT, cohort, case series, review, etc.).
 - No bare [CITE: ...] placeholders without a live PMID article URL. Optional brief editor note in parentheses after the link is fine.
 - No other external links or domains in the article (internal links from the candidate list only, plus at most these 3 PubMed PMID links total, each only in Expert Insight expert-cite lines and repeated in Sources as specified below).
+- TABIBI LIBRARY: When the user message includes a "TABIBI GOLD STANDARD CITATION LIBRARY" block, every PubMed PMID in Expert Insight expert-cite lines and in Sources MUST be taken from that block only — do not cite any PMID that is not listed there.
 
 INTERNAL LINKING (strict)
 - Use only the provided internal links/candidates.
@@ -280,6 +302,20 @@ export async function postGenerateContent(request: Request, toolScope: WPToolSco
   try {
     const body = await request.json();
     const { siteId, title, keywords, wordCount, editorialBrief, contentAngle, productTypeForLinks } = body;
+    const bodyRecord = body as Record<string, unknown>;
+
+    const refinementInstructions =
+      typeof bodyRecord.refinementInstructions === "string" ? bodyRecord.refinementInstructions.trim() : "";
+    const existingHtmlRaw =
+      typeof bodyRecord.existingHtml === "string" ? bodyRecord.existingHtml.trim() : "";
+    const isRefinement = refinementInstructions.length > 0 && existingHtmlRaw.length > 0;
+
+    if (isRefinement && existingHtmlRaw.length > MAX_REFINEMENT_HTML_CHARS) {
+      return NextResponse.json(
+        { error: `existingHtml exceeds ${MAX_REFINEMENT_HTML_CHARS} characters` },
+        { status: 400 }
+      );
+    }
 
     if (!siteId || !title || !Array.isArray(keywords) || typeof wordCount !== "number") {
       return NextResponse.json(
@@ -374,11 +410,7 @@ export async function postGenerateContent(request: Request, toolScope: WPToolSco
     }
 
     const tonePrompt = site.tone_prompt ?? "Write in a clear, authoritative, and engaging editorial tone.";
-    const systemPrompt = `${tonePrompt}
-${brandAddendumForScope(toolScope)}
-${weedLayer1BiblePrompt(toolScope)}
-
-You are an expert SEO content writer. Write a complete blog post in valid HTML (not markdown).
+    const initialDraftSystemTail = `You are an expert SEO content writer. Write a complete blog post in valid HTML (not markdown).
 Never wrap the output in code fences: do not use triple backticks, do not write \`\`\`html or \`\`\` before or after the HTML. Return raw HTML only.
 Do NOT put the article title in the body: no <h1> and no title heading. The CMS sets the post title separately.
 Start the body with an introduction using <p>, or the first <h2> section heading. Use <h2> and <h3> only inside the article. Target ${wordCount} words. In the main body, include at least one and up to three editorial internal links (<a>) to post/page URLs from the **Editorial posts and pages** list, chosen for maximum relevance to nearby copy; you may add separate product/Shop Now usage from the **Products** list—editorial links are not optional when that list is non-empty. Use descriptive anchor text. Do not add external links${toolScope === WP_TOOL_SCOPE.weedComContentProduction ? " except up to three PubMed PMID links, only inside Dr. Tabibi Expert Insight expert-cite lines (and duplicated in Sources per Bible)" : ""}.
@@ -398,6 +430,12 @@ ${
   short paragraph is enough.
 - 4 to 8 Q&A pairs total, all on-topic for the title and keywords.`
 }`;
+
+    const systemPrompt = `${tonePrompt}
+${brandAddendumForScope(toolScope)}
+${weedLayer1BiblePrompt(toolScope)}
+
+${isRefinement ? CONTENT_REFINEMENT_SYSTEM_TAIL : initialDraftSystemTail}`;
 
     const isProductCandidate = (l: LinkCandidate) => l.linkKind === "product";
     const editorialCandidates = internalLinks.filter((l) => !isProductCandidate(l));
@@ -441,25 +479,64 @@ ${productBlock}`;
       ? `Product type focus: still include **at least one editorial post/page link** from the editorial list (1–3 total editorial links). Separately, include 1–2 relevant **product** internal links when they fit. The candidate list favors products matching: "${productHint}". Introduce each product with a short editorial setup (why this example fits the section) so it reads as a recommendation in context, not a sudden plug. If the list is thin, sync product links in Site manager.`
       : "";
     const briefExtra = [sheetBrief, angleBrief, productBrief].filter(Boolean).join("\n\n");
-    const userMessage = `Title: ${title}
+
+    const tabibiForArticle =
+      toolScope === WP_TOOL_SCOPE.weedComContentProduction
+        ? selectRelevantTabibiEntries(title, keywords, {
+            editorialBrief: sheetBrief,
+            contentAngle:
+              typeof contentAngle === "string" && contentAngle.trim().length > 0
+                ? contentAngle.trim()
+                : undefined,
+            productTypeForLinks: productHint || undefined,
+          })
+        : [];
+    const tabibiLibraryBlock =
+      toolScope === WP_TOOL_SCOPE.weedComContentProduction
+        ? buildTabibiLibraryUserBlock(tabibiForArticle)
+        : "";
+
+    const initialDraftUserMessage = `Title: ${title}
 
 Keywords: ${keywords.join(", ")}${briefExtra ? `\n\n${briefExtra}` : ""}
 
 Internal link candidates (editorial: pick 1–3 post/page URLs for in-body <a> links—required when the editorial list is non-empty; products: separate Shop Now / commerce usage; each URL at most once):
-${linksText}
+${linksText}${tabibiLibraryBlock}
 
-Write the full HTML blog post.${toolScope === WP_TOOL_SCOPE.weedComContentProduction ? "" : " Include the FAQ block as specified (1 or 2 FAQ subsections by topic fit, bullets in answers where it helps)."} Remember: no em dash character anywhere in the HTML. Do not output an <h1>; the post title is set only in WordPress. Start with <p> or <h2>.${toolScope === WP_TOOL_SCOPE.weedComContentProduction ? " Body, FAQ, cards, Sources, footers: Inter-led font stack per Bible. Expert Insight (.expert-box): every opening tag in that block must include font-family:Inter,sans-serif!important (including PMID <a>) so paste/theme cannot override. FAQ: Bible outer wrapper + <h2>Frequently asked questions</h2> + <h3>/<p> pairs. Double-check every internal link: when the Editorial posts and pages list is non-empty, include at least one and up to three <a> links to those post/page URLs in the main body (most relevant first); Shop Now product blocks are separate and do not satisfy the editorial link requirement. Anchor text must be specific (never rely on 'this guide' / 'this breakdown' style phrasing). Product names must follow a clear contextual lead-in. Do not force the primary keyword into the opening of the first paragraph or into headings. Before finalizing: run Contentenator on every Expert Insight box (Bible v7) — study-type labels match the PubMed record type; each PMID matches that paper (no unrelated or fabricated IDs); specific numeric or outcome claims trace to that same PMID, not a different paper or a review-only mention of another study. At most 3 PubMed citations total; PMIDs only in Expert Insight expert-cite lines; each must use a verified PMID article URL (https://pubmed.ncbi.nlm.nih.gov/<digits>/) — never PubMed ?term= search links — with author/journal/year in adjacent text. Sources at the foot must list ONLY those same Expert Insight papers (no extra sources). Every Dr. Tabibi Expert Insight block and every product card must use the Bible templates with full inline style=\"...\" attributes (WordPress will not load custom CSS for these). When medication interactions are relevant, include the amber drug-interaction disclaimer box (⚕ icon) from the Bible. End with Sources (if any expert-cites) and the legal footer — required verbatim opening \"For adults 21+ only. Cannabis laws vary by state.\" plus emergency routing; never omit. The article must end completely — never stop mid-sentence." : ""}`;
+Write the full HTML blog post.${toolScope === WP_TOOL_SCOPE.weedComContentProduction ? "" : " Include the FAQ block as specified (1 or 2 FAQ subsections by topic fit, bullets in answers where it helps)."} Remember: no em dash character anywhere in the HTML. Do not output an <h1>; the post title is set only in WordPress. Start with <p> or <h2>.${toolScope === WP_TOOL_SCOPE.weedComContentProduction ? ` Body, FAQ, cards, footers: Inter-led font stack per Bible. Expert Insight (.expert-box): every opening tag in that block must include font-family:Inter,sans-serif!important (including PMID <a>) so paste/theme cannot override. FAQ: Bible outer wrapper + <h2>Frequently asked questions</h2> + <h3>/<p> pairs. Double-check every internal link: when the Editorial posts and pages list is non-empty, include at least one and up to three <a> links to those post/page URLs in the main body (most relevant first); Shop Now product blocks are separate and do not satisfy the editorial link requirement. Anchor text must be specific (never rely on 'this guide' / 'this breakdown' style phrasing). Product names must follow a clear contextual lead-in. Do not force the primary keyword into the opening of the first paragraph or into headings. Before finalizing: run Contentenator on every Expert Insight box (Bible v7) — study-type labels match the PubMed record type; each PMID matches that paper (no unrelated or fabricated IDs); specific numeric or outcome claims trace to that same PMID, not a different paper or a review-only mention of another study. At most 3 PubMed citations total; PMIDs only in Expert Insight expert-cite lines; each must use a verified PMID article URL (https://pubmed.ncbi.nlm.nih.gov/<digits>/) — never PubMed ?term= search links — with author/journal/year in adjacent text. Do not output a Sources HTML block: the server appends Sources (up to 4 most relevant PMIDs from the Tabibi JSON). Every Dr. Tabibi Expert Insight block and every product card must use the Bible templates with full inline style=\"...\" attributes (WordPress will not load custom CSS for these). When medication interactions are relevant, include the amber drug-interaction disclaimer box (⚕ icon) from the Bible. End with the legal footer only — required verbatim opening \"For adults 21+ only. Cannabis laws vary by state.\" plus emergency routing; never omit. The article must end completely — never stop mid-sentence.` : ""}`;
+
+    const refinementUserMessage = `Title: ${title}
+
+Keywords: ${keywords.join(", ")}${briefExtra ? `\n\n${briefExtra}` : ""}
+
+Internal link candidates (use only these URLs when adding or changing links):
+${linksText}${tabibiLibraryBlock}
+
+----- EXISTING HTML -----
+${existingHtmlRaw}
+----- END EXISTING HTML -----
+
+Editor instructions:
+${refinementInstructions}
+
+Output the complete revised HTML only. No markdown code fences.`;
+
+    const userMessage = isRefinement ? refinementUserMessage : initialDraftUserMessage;
 
     const raw = await callClaude(systemPrompt, userMessage, {
       maxTokens: maxTokensForArticleHtml(wordCount),
     });
     let content = stripLeadingPostTitleH1(replaceEmDashes(stripHtmlCodeFences(raw)));
 
+    let tabibiSourcesPicked: TabibiPmidEntry[] = [];
     if (toolScope === WP_TOOL_SCOPE.weedComContentProduction) {
       content = await finalizeWeedLearnHtml(content, title, keywords);
       content = lockExpertBoxTypography(content);
+      if (tabibiForArticle.length > 0) {
+        tabibiSourcesPicked = pickTabibiSourcesForFooter(content, tabibiForArticle);
+        content = appendTabibiSourcesFooter(content, tabibiForArticle);
+      }
     }
-
 
     const used: { title: string; url: string }[] = [];
     for (const link of internalLinks) {
@@ -474,6 +551,15 @@ Write the full HTML blog post.${toolScope === WP_TOOL_SCOPE.weedComContentProduc
       content,
       internalLinksUsed: used,
       wordCount: wordCountActual,
+      refinement: isRefinement,
+      ...(toolScope === WP_TOOL_SCOPE.weedComContentProduction && tabibiForArticle.length > 0
+        ? {
+            tabibiExpertInsightPmidsSuggested: tabibiForArticle.map((e) => e.pmid),
+            ...(tabibiSourcesPicked.length > 0
+              ? { tabibiSourcesFooterPmids: tabibiSourcesPicked.map((e) => e.pmid) }
+              : {}),
+          }
+        : {}),
     });
   } catch (err) {
     const msg = errorMessage(err);

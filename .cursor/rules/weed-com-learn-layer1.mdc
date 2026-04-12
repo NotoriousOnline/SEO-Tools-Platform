@@ -3,6 +3,9 @@ description: Weed.com Learn Layer 1 — Expert Insight Contentenator rules and R
 globs:
   - lib/contentProduction/generateContentPost.ts
   - lib/contentProduction/publishPost.ts
+  - lib/tabibiPmidDatabase.ts
+  - lib/tabibiSourcesFooter.ts
+  - lib/data/tabibiPmidDatabaseCwV6.json
   - app/api/weed-com-content-production/**/*.ts
 ---
 
@@ -22,6 +25,14 @@ All Layer 1 Weed.com Learn prompts live in `weedLayer1BiblePrompt()` in `lib/con
 3. **Claim-to-citation match** — Specific findings (doses, outcomes, effect language) must be supported by **that** PMID, not by a primary study only discussed inside a cited review.
 
 When editing the Bible string, keep these three gates aligned with the **CONTENTENATOR** section, **CITATIONS**, and **QUALITY SELF-CHECK** blocks in the same file. Also mirror key points in `brandAddendumForScope` (weed) and the Weed branch of the generate-content `userMessage` where applicable.
+
+## Tabibi Gold Standard citation JSON (Expert Insight PMID source)
+
+- **Data file:** `lib/data/tabibiPmidDatabaseCwV6.json` (Tabibi library: metadata + `pmid_database` array).
+- **Selection:** `selectRelevantTabibiEntries()` in `lib/tabibiPmidDatabase.ts` scores entries against title, keywords, editorial brief, content angle, and product type; returns up to 14 candidates (tier tie-break: T1 first). If nothing matches, it falls back to tier-prioritized entries.
+- **Prompt:** `buildTabibiLibraryUserBlock()` injects the **TABIBI GOLD STANDARD CITATION LIBRARY** block into the generate-content user message for Weed only. The model must cite **only** PMIDs from that list in Expert Insight and Sources (at most 3 per article per Bible).
+- **API:** Successful Weed responses may include `tabibiExpertInsightPmidsSuggested` (ranked pool) and `tabibiSourcesFooterPmids` (PMIDs actually written into the appended Sources block, up to 4).
+- **Sources footer:** `appendTabibiSourcesFooter()` in `lib/tabibiSourcesFooter.ts` runs after `finalizeWeedLearnHtml` + `lockExpertBoxTypography`. It inserts a Bible-style **Sources** block (JSON-backed citations only) before the legal footer, strips a duplicate model-generated Sources section when it matches the Bible outer wrapper, and picks PMIDs via `pickTabibiSourcesForFooter()` (prefer PMIDs linked in the HTML, then pad with the next most relevant ranked entries; max 4).
 
 ## Expert Insight HTML hook and typography
 

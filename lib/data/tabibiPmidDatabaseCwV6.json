@@ -1,0 +1,2770 @@
+{
+  "metadata": {
+    "name": "Tabibi Gold Standard Citation Library",
+    "version": "CW v6",
+    "date": "April 2026",
+    "owner": "Dr. Alexander Tabibi MD",
+    "source": "PubMed MCP — all PMIDs verified",
+    "total_entries": 56,
+    "sections": [
+      "T1_RCT",
+      "T2_Reviews",
+      "T3a_Human_Observational",
+      "T3b_Mechanistic",
+      "T4_Preclinical",
+      "Psilocybin_Hallucinogens",
+      "Functional_Mushrooms"
+    ],
+    "tier_claim_language": {
+      "T1": "demonstrates",
+      "T2": "evidence suggests",
+      "T3a": "associated with",
+      "T3b": "evidence suggests",
+      "T4": "shown in preclinical models"
+    }
+  },
+  "pmid_database": [
+    {
+      "entry_id": "7",
+      "tier": "T1",
+      "pmid": "21362108",
+      "title": "A randomized, double-blind, placebo-controlled, parallel-group, enriched-design study of nabiximols* (Sativex), as add-on therapy, in subjects with refractory spasticity caused by multiple sclerosis.",
+      "authors": [
+        "Novotna A",
+        "Mares J",
+        "Ratcliffe S",
+        "Novakova I",
+        "Vachova M",
+        "Zapletalova O",
+        "Gasperini C",
+        "Pozzilli C",
+        "Cefaro L",
+        "Comi G",
+        "Rossi P",
+        "Ambler Z",
+        "Stelmasiak Z",
+        "Erdmann A",
+        "Montalban X",
+        "Klimek A",
+        "Davies P"
+      ],
+      "journal": "European Journal of Neurology",
+      "year": 2011,
+      "volume": "18",
+      "issue": "9",
+      "pages": "1122-31",
+      "doi": "10.1111/j.1468-1331.2010.03328.x",
+      "url": "https://pubmed.ncbi.nlm.nih.gov/21362108/",
+      "claim_language": "demonstrates",
+      "abstract_summary": "Phase 3 enriched-design RCT of Sativex (nabiximols) for MS spasticity. 241 randomized; highly significant improvement in spasticity NRS (P=0.0002) in favour of nabiximols. Secondary endpoints including spasm frequency and sleep disturbance all significant.",
+      "topic_tags": [
+        "MS",
+        "spasticity",
+        "nabiximols",
+        "Sativex",
+        "THC",
+        "CBD",
+        "RCT"
+      ],
+      "use_for_sections": [
+        "MS spasticity",
+        "Sativex",
+        "cannabinoids for neurological conditions"
+      ]
+    },
+    {
+      "entry_id": "8",
+      "tier": "T1",
+      "pmid": "22832859",
+      "title": "Cannabidiol enhances anandamide signaling and alleviates psychotic symptoms of schizophrenia.",
+      "authors": [
+        "Leweke FM",
+        "Piomelli D",
+        "Pahlisch F",
+        "Muhl D",
+        "Gerth CW",
+        "Hoyer C",
+        "Klosterkotter J",
+        "Hellmich M",
+        "Koethe D"
+      ],
+      "journal": "Translational Psychiatry",
+      "year": 2012,
+      "volume": "2",
+      "issue": "3",
+      "pages": "e94",
+      "doi": "10.1038/tp.2012.15",
+      "url": "https://pubmed.ncbi.nlm.nih.gov/22832859/",
+      "claim_language": "demonstrates",
+      "abstract_summary": "Double-blind RCT comparing CBD vs amisulpride in acute schizophrenia. Both produced significant clinical improvement. CBD had superior side-effect profile and elevated anandamide levels, significantly associated with clinical improvement.",
+      "topic_tags": [
+        "schizophrenia",
+        "CBD",
+        "psychosis",
+        "anandamide",
+        "antipsychotic",
+        "RCT"
+      ],
+      "use_for_sections": [
+        "CBD for mental health",
+        "schizophrenia",
+        "psychosis",
+        "CBD mechanism"
+      ]
+    },
+    {
+      "entry_id": "9",
+      "tier": "T1",
+      "pmid": "27573936",
+      "title": "Efficacy and Safety of Cannabidiol and Tetrahydrocannabivarin on Glycemic and Lipid Parameters in Patients With Type 2 Diabetes: A Randomized, Double-Blind, Placebo-Controlled, Parallel Group Pilot Study.",
+      "authors": [
+        "Jadoon KA",
+        "Ratcliffe SH",
+        "Barrett DA",
+        "Thomas EL",
+        "Stott C",
+        "Bell JD",
+        "O'Sullivan SE",
+        "Tan GD"
+      ],
+      "journal": "Diabetes Care",
+      "year": 2016,
+      "volume": "39",
+      "issue": "10",
+      "pages": "1777-86",
+      "doi": "10.2337/dc16-0650",
+      "url": "https://pubmed.ncbi.nlm.nih.gov/27573936/",
+      "claim_language": "demonstrates",
+      "abstract_summary": "RCT in 62 T2 diabetes patients. THCV significantly decreased fasting plasma glucose and improved beta-cell function and adiponectin. CBD decreased resistin and increased GIP vs baseline. CBD and THCV were well tolerated.",
+      "topic_tags": [
+        "THCV",
+        "CBD",
+        "type 2 diabetes",
+        "glycemic control",
+        "insulin",
+        "RCT"
+      ],
+      "use_for_sections": [
+        "THCV",
+        "CBD for metabolic conditions",
+        "diabetes",
+        "blood sugar"
+      ]
+    },
+    {
+      "entry_id": "10",
+      "tier": "T1",
+      "pmid": "24977967",
+      "title": "Clinical endocannabinoid deficiency (CECD) revisited: can this concept explain the therapeutic benefits of cannabis in migraine, fibromyalgia, irritable bowel syndrome and other treatment-resistant conditions?",
+      "authors": [
+        "Smith SC",
+        "Wagner MS"
+      ],
+      "journal": "Neuro Endocrinology Letters",
+      "year": 2014,
+      "volume": "35",
+      "issue": "3",
+      "pages": "198-201",
+      "doi": null,
+      "url": "https://pubmed.ncbi.nlm.nih.gov/24977967/",
+      "claim_language": "demonstrates",
+      "abstract_summary": "Review of CECD (clinical endocannabinoid deficiency) concept for migraine, fibromyalgia, IBS, and other treatment-resistant conditions. Evidence supports endocannabinoid deficiencies in these conditions. Cannabis blocks spinal, peripheral, and gastrointestinal pain mechanisms.",
+      "topic_tags": [
+        "endocannabinoid deficiency",
+        "migraine",
+        "fibromyalgia",
+        "IBS",
+        "CECD"
+      ],
+      "use_for_sections": [
+        "ECS deficiency",
+        "cannabis for migraine",
+        "fibromyalgia",
+        "IBS"
+      ]
+    },
+    {
+      "entry_id": "22",
+      "tier": "T2",
+      "pmid": "38353645",
+      "title": "A Systematic Review of the Clinical Effects of Cannabis and Cannabinoids in Posttraumatic Stress Disorder Symptoms and Symptom Clusters.",
+      "authors": [
+        "Rodas JD",
+        "George TP",
+        "Hassan AN"
+      ],
+      "journal": "The Journal of Clinical Psychiatry",
+      "year": 2024,
+      "volume": "85",
+      "issue": "1",
+      "pages": null,
+      "doi": "10.4088/JCP.23r14862",
+      "url": "https://pubmed.ncbi.nlm.nih.gov/38353645/",
+      "claim_language": "evidence suggests",
+      "abstract_summary": "14 studies reviewed. 5/10 suggested benefits on overall PTSD symptoms; some benefits on hyperarousal/re-experiencing clusters. Individuals with comorbid CUD at greater risk of worsening. Insufficient evidence to recommend broadly.",
+      "topic_tags": [
+        "PTSD",
+        "cannabis",
+        "cannabinoids",
+        "systematic review",
+        "mental health"
+      ],
+      "use_for_sections": [
+        "cannabis for PTSD",
+        "trauma",
+        "anxiety",
+        "mental health"
+      ]
+    },
+    {
+      "entry_id": "23",
+      "tier": "T2",
+      "pmid": "35537535",
+      "title": "Cannabinoids, Insomnia, and Other Sleep Disorders.",
+      "authors": [
+        "Lavender I",
+        "McGregor IS",
+        "Suraev A",
+        "Grunstein RR",
+        "Hoyos CM"
+      ],
+      "journal": "Chest",
+      "year": 2022,
+      "volume": "162",
+      "issue": "2",
+      "pages": "452-465",
+      "doi": "10.1016/j.chest.2022.04.151",
+      "url": "https://pubmed.ncbi.nlm.nih.gov/35537535/",
+      "claim_language": "evidence suggests",
+      "abstract_summary": "Critical review of cannabinoids (THC, CBD, CBN) for sleep disorders including insomnia and sleep apnea. ECS modulates circadian sleep-wake cycle. Most studies limited by small sample size and bias. Strong rationale for continued investigation.",
+      "topic_tags": [
+        "sleep",
+        "insomnia",
+        "CBD",
+        "THC",
+        "CBN",
+        "sleep apnea",
+        "review"
+      ],
+      "use_for_sections": [
+        "CBD for sleep",
+        "cannabis for insomnia",
+        "CBN",
+        "sleep disorders"
+      ]
+    },
+    {
+      "entry_id": "24",
+      "tier": "T2",
+      "pmid": "38430618",
+      "title": "Does medicinal cannabis affect depression, anxiety, and stress in people with cancer? A systematic review and meta-analysis of intervention studies.",
+      "authors": [
+        "Crichton M",
+        "Dissanayaka T",
+        "Marx W",
+        "Gamage E",
+        "Travica N",
+        "Bowers A",
+        "Isenring E",
+        "Yates P",
+        "Marshall S"
+      ],
+      "journal": "Maturitas",
+      "year": 2024,
+      "volume": "184",
+      "pages": "107941",
+      "doi": "10.1016/j.maturitas.2024.107941",
+      "url": "https://pubmed.ncbi.nlm.nih.gov/38430618/",
+      "claim_language": "evidence suggests",
+      "abstract_summary": "15 studies, 1898 participants. Cannabis significantly improved appetite in cancer patients (OR 12.3). No clinically significant effect on depression/anxiety. Higher-dose THC increased anxiety risk. Insufficient evidence for mood outcomes.",
+      "topic_tags": [
+        "cancer",
+        "cannabis",
+        "depression",
+        "anxiety",
+        "appetite",
+        "meta-analysis",
+        "palliative"
+      ],
+      "use_for_sections": [
+        "cannabis for cancer symptoms",
+        "appetite",
+        "palliative care",
+        "cancer pain"
+      ]
+    },
+    {
+      "entry_id": "25",
+      "tier": "T2",
+      "pmid": "30407616",
+      "title": "Cannabis for the treatment of Crohn's disease.",
+      "authors": [
+        "Kafil TS",
+        "Nguyen TM",
+        "MacDonald JK",
+        "Chande N"
+      ],
+      "journal": "Cochrane Database of Systematic Reviews",
+      "year": 2018,
+      "volume": "11",
+      "issue": "11",
+      "pages": "CD012853",
+      "doi": "10.1002/14651858.CD012853.pub2",
+      "url": "https://pubmed.ncbi.nlm.nih.gov/30407616/",
+      "claim_language": "evidence suggests",
+      "abstract_summary": "Cochrane review. 3 RCTs, 93 participants. THC cannabis showed clinical response advantage over placebo (91% vs 40%). CBD oil showed no difference in remission. Effects uncertain due to small sizes and very low evidence certainty.",
+      "topic_tags": [
+        "Crohn's disease",
+        "IBD",
+        "cannabis",
+        "CBD",
+        "THC",
+        "Cochrane",
+        "inflammation"
+      ],
+      "use_for_sections": [
+        "cannabis for Crohn's",
+        "IBD",
+        "gut health",
+        "inflammation"
+      ]
+    },
+    {
+      "entry_id": "26",
+      "tier": "T2",
+      "pmid": "37168078",
+      "title": "Cannabis and adverse cardiovascular events: A systematic review and meta-analysis of observational studies.",
+      "authors": [
+        "Theerasuwipakorn N",
+        "Prechawat S",
+        "Chokesuwattanaskul R",
+        "Siranart N",
+        "Marsukjai A",
+        "Thumtecho S",
+        "Rungpradubvong V"
+      ],
+      "journal": "Toxicology Reports",
+      "year": 2023,
+      "volume": "10",
+      "pages": "537-543",
+      "doi": "10.1016/j.toxrep.2023.04.011",
+      "url": "https://pubmed.ncbi.nlm.nih.gov/37168078/",
+      "claim_language": "evidence suggests",
+      "abstract_summary": "20 studies, 183M patients. Cannabis use not significantly associated with acute MI (OR 1.29) or stroke (OR 1.35). Caution warranted due to study heterogeneity. Current evidence does not demonstrate significantly increased CV risk.",
+      "topic_tags": [
+        "cardiovascular",
+        "cannabis",
+        "heart attack",
+        "stroke",
+        "meta-analysis",
+        "safety"
+      ],
+      "use_for_sections": [
+        "cannabis safety",
+        "cardiovascular risk",
+        "cannabis adverse effects"
+      ]
+    },
+    {
+      "entry_id": "27",
+      "tier": "T2",
+      "pmid": "27816801",
+      "title": "Medical cannabis and mental health: A guided systematic review.",
+      "authors": [
+        "Walsh Z",
+        "Gonzalez R",
+        "Crosby K",
+        "S Thiessen M",
+        "Carroll C",
+        "Bonn-Miller MO"
+      ],
+      "journal": "Clinical Psychology Review",
+      "year": 2016,
+      "volume": "51",
+      "pages": "15-29",
+      "doi": "10.1016/j.cpr.2016.10.002",
+      "url": "https://pubmed.ncbi.nlm.nih.gov/27816801/",
+      "claim_language": "evidence suggests",
+      "abstract_summary": "31 studies reviewed. Preliminary evidence supports CTP for PTSD and as substitute for substance misuse. Psychotic disorders may worsen. Cognitive assessment may be affected acutely. CTP does not increase self-harm risk.",
+      "topic_tags": [
+        "medical cannabis",
+        "mental health",
+        "PTSD",
+        "psychosis",
+        "cognition",
+        "systematic review"
+      ],
+      "use_for_sections": [
+        "cannabis for mental health",
+        "PTSD",
+        "anxiety",
+        "depression",
+        "psychosis risk"
+      ]
+    },
+    {
+      "entry_id": "28",
+      "tier": "T2",
+      "pmid": "32848902",
+      "title": "Cannabis Improves Obsessive-Compulsive Disorder—Case Report and Review of the Literature.",
+      "authors": [
+        "Szejko N",
+        "Fremer C",
+        "Muller-Vahl KR"
+      ],
+      "journal": "Frontiers in Psychiatry",
+      "year": 2020,
+      "volume": "11",
+      "pages": "681",
+      "doi": "10.3389/fpsyt.2020.00681",
+      "url": "https://pubmed.ncbi.nlm.nih.gov/32848902/",
+      "claim_language": "evidence suggests",
+      "abstract_summary": "Case report + literature review. THC (dronabinol) improved OCD symptoms. Small open trial: nabilone + exposure therapy superior to monotherapy. Case presented: severe OCD markedly improved with medicinal cannabis, quality of life improved.",
+      "topic_tags": [
+        "OCD",
+        "Tourette",
+        "THC",
+        "cannabis",
+        "cannabinoids",
+        "mental health"
+      ],
+      "use_for_sections": [
+        "cannabis for OCD",
+        "Tourette syndrome",
+        "mental health",
+        "CBG for neurological"
+      ]
+    },
+    {
+      "entry_id": "29",
+      "tier": "T2",
+      "pmid": "31603710",
+      "title": "Early evidence of the impact of cannabis legalization on cannabis use, cannabis use disorder, and the use of other substances: Findings from state policy evaluations.",
+      "authors": [
+        "Smart R",
+        "Pacula RL"
+      ],
+      "journal": "The American Journal of Drug and Alcohol Abuse",
+      "year": 2019,
+      "volume": "45",
+      "issue": "6",
+      "pages": "644-663",
+      "doi": "10.1080/00952990.2019.1669626",
+      "url": "https://pubmed.ncbi.nlm.nih.gov/31603710/",
+      "claim_language": "evidence suggests",
+      "abstract_summary": "Narrative review of quasi-experimental studies on state MCLs and RCLs. MCLs increase adult but not adolescent cannabis use. May reduce opioid harms. RCLs show little impact on adolescent prevalence. Impacts on alcohol/tobacco uncertain.",
+      "topic_tags": [
+        "legalization",
+        "policy",
+        "MCL",
+        "RCL",
+        "state law",
+        "opioids",
+        "public health"
+      ],
+      "use_for_sections": [
+        "cannabis legalization",
+        "state policy",
+        "legal overview",
+        "public health"
+      ]
+    },
+    {
+      "entry_id": "30",
+      "tier": "T2",
+      "pmid": "33759668",
+      "title": "The impact of cannabis use on vasomotor symptoms, mood, insomnia and sexuality in perimenopausal and postmenopausal women: a systematic review.",
+      "authors": [
+        "Mejia-Gomez J",
+        "Phung N",
+        "Philippopoulos E",
+        "Murphy KE",
+        "Wolfman W"
+      ],
+      "journal": "Climacteric",
+      "year": 2021,
+      "volume": "24",
+      "issue": "6",
+      "pages": "572-576",
+      "doi": "10.1080/13697137.2021.1898581",
+      "url": "https://pubmed.ncbi.nlm.nih.gov/33759668/",
+      "claim_language": "evidence suggests",
+      "abstract_summary": "3 studies met inclusion criteria. Cannabis use associated with hot flashes in HIV+ menopausal women. Women expected cannabis to improve depression, anxiety, hot flashes, sleep. Very limited evidence base — research urgently needed.",
+      "topic_tags": [
+        "menopause",
+        "cannabis",
+        "hot flashes",
+        "insomnia",
+        "mood",
+        "women's health"
+      ],
+      "use_for_sections": [
+        "cannabis for menopause",
+        "women's health",
+        "sleep",
+        "hormones"
+      ]
+    },
+    {
+      "entry_id": "31",
+      "tier": "T2",
+      "pmid": "26651971",
+      "title": "Cannabinoids and Cytochrome P450 Interactions.",
+      "authors": [
+        "Zendulka O",
+        "Dovrtelova G",
+        "Noskova K",
+        "Turjap M",
+        "Sulcova A",
+        "Hanus L",
+        "Jurica J"
+      ],
+      "journal": "Current Drug Metabolism",
+      "year": 2016,
+      "volume": "17",
+      "issue": "3",
+      "pages": "206-26",
+      "doi": "10.2174/1389200217666151210142051",
+      "url": "https://pubmed.ncbi.nlm.nih.gov/26651971/",
+      "claim_language": "evidence suggests",
+      "abstract_summary": "Review of cannabinoid-CYP450 interactions. CBD is the most potent CYP inhibitor. CYP2C9, CYP2C19, CYP3A4 catalyze phytocannabinoid hydroxylation. Drug-drug interactions documented but clinical relevance unclear.",
+      "topic_tags": [
+        "CYP450",
+        "drug interactions",
+        "CBD",
+        "metabolism",
+        "pharmacology"
+      ],
+      "use_for_sections": [
+        "CBD drug interactions",
+        "pharmacology",
+        "safety",
+        "medication interactions"
+      ]
+    },
+    {
+      "entry_id": "32",
+      "tier": "T2",
+      "pmid": "34468204",
+      "title": "Cannabinol and Sleep: Separating Fact from Fiction.",
+      "authors": [
+        "Corroon J"
+      ],
+      "journal": "Cannabis and Cannabinoid Research",
+      "year": 2021,
+      "volume": "6",
+      "issue": "5",
+      "pages": "366-371",
+      "doi": "10.1089/can.2021.0006",
+      "url": "https://pubmed.ncbi.nlm.nih.gov/34468204/",
+      "claim_language": "evidence suggests",
+      "abstract_summary": "Narrative review of CBN and sleep. 8 studies reviewed. No clinical trials measuring CBN vs validated sleep questionnaires found. Insufficient evidence to support sleep-related claims. Doses in products typically too low. CBN sleep claims unsubstantiated.",
+      "topic_tags": [
+        "CBN",
+        "sleep",
+        "insomnia",
+        "cannabinol",
+        "claims",
+        "evidence"
+      ],
+      "use_for_sections": [
+        "CBN",
+        "sleep",
+        "insomnia products",
+        "CBN claims"
+      ]
+    },
+    {
+      "entry_id": "33",
+      "tier": "T2",
+      "pmid": "40466988",
+      "title": "Altered Neurobehavioral Reward Response Predicts Psychotic-Like Experiences in Youth Exposed to Cannabis Prenatally.",
+      "authors": [
+        "Amir CM",
+        "Ghahremani DG",
+        "Chang SE",
+        "Cooper ZD",
+        "Bearden CE"
+      ],
+      "journal": "Biological Psychiatry",
+      "year": 2025,
+      "volume": "99",
+      "issue": "2",
+      "pages": "165-174",
+      "doi": "10.1016/j.biopsych.2025.05.019",
+      "url": "https://pubmed.ncbi.nlm.nih.gov/40466988/",
+      "claim_language": "evidence suggests",
+      "abstract_summary": "ABCD Study, 11,368 children. Prenatal cannabis exposure longitudinally associated with psychotic-like experiences. Blunted striatal reward response mediates PCE-psychosis link. Dopaminergic disruption implicated.",
+      "topic_tags": [
+        "prenatal cannabis",
+        "adolescent",
+        "brain",
+        "psychosis",
+        "neurodevelopment",
+        "ABCD study"
+      ],
+      "use_for_sections": [
+        "cannabis risks",
+        "pregnancy",
+        "adolescent brain",
+        "psychosis risk",
+        "safety warnings"
+      ]
+    },
+    {
+      "entry_id": "34",
+      "tier": "T2",
+      "pmid": "39694905",
+      "title": "Adverse events associated with the use of cannabis-based products in people living with cancer: a systematic scoping review.",
+      "authors": [
+        "Cheah I",
+        "Hunter J",
+        "Gelissen I",
+        "Chan WJ",
+        "Harnett JE"
+      ],
+      "journal": "Supportive Care in Cancer",
+      "year": 2024,
+      "volume": "33",
+      "issue": "1",
+      "pages": "40",
+      "doi": "10.1007/s00520-024-09087-w",
+      "url": "https://pubmed.ncbi.nlm.nih.gov/39694905/",
+      "claim_language": "evidence suggests",
+      "abstract_summary": "152 studies including 61 RCTs. Primarily GI, liver/peritoneal and haematological cancers. Most common adverse events: nervous system (118), psychiatric (101), GI (81). CBP mainly oral or inhaled THC/CBD combinations. Under-reporting noted.",
+      "topic_tags": [
+        "cancer",
+        "adverse events",
+        "CBD",
+        "THC",
+        "safety",
+        "cannabis-based products"
+      ],
+      "use_for_sections": [
+        "cannabis safety",
+        "cancer",
+        "adverse effects",
+        "THC side effects"
+      ]
+    },
+    {
+      "entry_id": "35",
+      "tier": "T2",
+      "pmid": "34215346",
+      "title": "Consensus recommendations on dosing and administration of medical cannabis to treat chronic pain: results of a modified Delphi process.",
+      "authors": [
+        "Bhaskar A",
+        "Bell A",
+        "Boivin M",
+        "Briques W",
+        "Brown M",
+        "Clarke H",
+        "Cyr C",
+        "Eisenberg E",
+        "de Oliveira Silva RF",
+        "Frohlich E",
+        "Georgius P",
+        "Hogg M",
+        "Horsted TI",
+        "MacCallum CA",
+        "Muller-Vahl KR",
+        "O'Connell C",
+        "Sealey R",
+        "Seibolt M",
+        "Sihota A",
+        "Smith BK",
+        "Sulak D",
+        "Vigano A",
+        "Moulin DE"
+      ],
+      "journal": "Journal of Cannabis Research",
+      "year": 2021,
+      "volume": "3",
+      "issue": "1",
+      "pages": "22",
+      "doi": "10.1186/s42238-021-00073-1",
+      "url": "https://pubmed.ncbi.nlm.nih.gov/34215346/",
+      "claim_language": "evidence suggests",
+      "abstract_summary": "20 global experts, 9 countries, modified Delphi consensus. Three dosing protocols (routine, conservative, rapid) established. CBD-predominant start, titrate to goals, then add THC if needed. Max 40 mg/day THC. Applicable to neuropathic, inflammatory, nociplastic, mixed pain.",
+      "topic_tags": [
+        "chronic pain",
+        "dosing",
+        "CBD",
+        "THC",
+        "medical cannabis",
+        "consensus",
+        "expert panel"
+      ],
+      "use_for_sections": [
+        "cannabis dosing",
+        "chronic pain",
+        "pain management",
+        "CBD dosage"
+      ]
+    },
+    {
+      "entry_id": "36",
+      "tier": "T2",
+      "pmid": "23567085",
+      "title": "Cannabinoid signaling and liver therapeutics.",
+      "authors": [
+        "Mallat A",
+        "Teixeira-Clerc F",
+        "Lotersztajn S"
+      ],
+      "journal": "Journal of Hepatology",
+      "year": 2013,
+      "volume": "59",
+      "issue": "4",
+      "pages": "891-6",
+      "doi": "10.1016/j.jhep.2013.03.032",
+      "url": "https://pubmed.ncbi.nlm.nih.gov/23567085/",
+      "claim_language": "evidence suggests",
+      "abstract_summary": "Review of ECS in liver disease. CB1 antagonists show antifibrogenic and metabolic benefits; brain-penetrant rimonabant withdrawn due to mood effects. Peripherally-restricted CB1 antagonists validated in NAFLD preclinical models. CB2 is anti-inflammatory/antifibrogenic target.",
+      "topic_tags": [
+        "liver",
+        "ECS",
+        "CB1",
+        "CB2",
+        "fibrosis",
+        "NAFLD",
+        "cirrhosis"
+      ],
+      "use_for_sections": [
+        "ECS in liver disease",
+        "cannabis and liver",
+        "CBD for liver"
+      ]
+    },
+    {
+      "entry_id": "39",
+      "tier": "T2",
+      "pmid": "33168643",
+      "title": "The Pharmacological Case for Cannabigerol.",
+      "authors": [
+        "Nachnani R",
+        "Raup-Konsavage WM",
+        "Vrana KE"
+      ],
+      "journal": "Journal of Pharmacology and Experimental Therapeutics",
+      "year": 2020,
+      "volume": "376",
+      "issue": "2",
+      "pages": "204-212",
+      "doi": "10.1124/jpet.120.000340",
+      "url": "https://pubmed.ncbi.nlm.nih.gov/33168643/",
+      "claim_language": "evidence suggests",
+      "abstract_summary": "Review of CBG pharmacology. Unique interactions with alpha-2 adrenoceptors and 5-HT. Potential for Huntington's, Parkinson's, MS, IBD, antibacterial. Little research compared to CBD. Marketed as dietary supplement. Toxicological hazards underdefined.",
+      "topic_tags": [
+        "CBG",
+        "cannabigerol",
+        "pharmacology",
+        "neuroprotection",
+        "IBD",
+        "antibacterial"
+      ],
+      "use_for_sections": [
+        "CBG",
+        "minor cannabinoids",
+        "Huntington's",
+        "IBD",
+        "neuroprotection"
+      ]
+    },
+    {
+      "entry_id": "40",
+      "tier": "T2",
+      "pmid": "29710074",
+      "title": "Association of Cannabis With Cognitive Functioning in Adolescents and Young Adults: A Systematic Review and Meta-analysis.",
+      "authors": [
+        "Scott JC",
+        "Slomiak ST",
+        "Jones JD",
+        "Rosen AFG",
+        "Moore TM",
+        "Gur RC"
+      ],
+      "journal": "JAMA Psychiatry",
+      "year": 2018,
+      "volume": "75",
+      "issue": "6",
+      "pages": "585-595",
+      "doi": "10.1001/jamapsychiatry.2018.0335",
+      "url": "https://pubmed.ncbi.nlm.nih.gov/29710074/",
+      "claim_language": "evidence suggests",
+      "abstract_summary": "69 studies, 2152 cannabis users. Small overall effect on cognition (d=-0.25). Abstinence >72 hours reduced effect to non-significant (d=-0.08). Previous studies may have overstated deficits. Deficits may reflect residual/withdrawal effects.",
+      "topic_tags": [
+        "cognition",
+        "adolescents",
+        "cannabis",
+        "cognitive function",
+        "meta-analysis",
+        "abstinence"
+      ],
+      "use_for_sections": [
+        "cannabis and cognition",
+        "adolescent cannabis use",
+        "brain effects",
+        "safety"
+      ]
+    },
+    {
+      "entry_id": "76_t2",
+      "tier": "T2",
+      "pmid": "38655747",
+      "title": "Effects of cannabidiol and delta-tetrahydrocannabinol on cytochrome P450 enzymes: a systematic review.",
+      "authors": [
+        "Smith SA",
+        "Le GH",
+        "Teopiz KM",
+        "Kwan ATH",
+        "Rhee TG",
+        "Ho RC",
+        "Wu J",
+        "Cao B",
+        "Ceban F",
+        "McIntyre RS"
+      ],
+      "journal": "Drug Metabolism Reviews",
+      "year": 2024,
+      "volume": "56",
+      "issue": "2",
+      "pages": "164-174",
+      "doi": "10.1080/03602532.2024.2346767",
+      "url": "https://pubmed.ncbi.nlm.nih.gov/38655747/",
+      "claim_language": "evidence suggests",
+      "abstract_summary": "7 studies. Both CBD and THC inhibit CYP1A2, CYP2C19, CYP2B6. Inhibitory effects may decrease metabolism of psychotropic medications and increase adverse effects. High risk of DDIs for patients using both cannabis and psychotropic drugs. Induction understudied.",
+      "topic_tags": [
+        "CBD",
+        "THC",
+        "CYP450",
+        "drug interactions",
+        "psychotropic",
+        "metabolism",
+        "systematic review"
+      ],
+      "use_for_sections": [
+        "CBD drug interactions",
+        "THC drug interactions",
+        "medication safety",
+        "pharmacology"
+      ]
+    },
+    {
+      "entry_id": "46",
+      "tier": "T3a",
+      "pmid": "31109198",
+      "title": "Cannabidiol for the Reduction of Cue-Induced Craving and Anxiety in Drug-Abstinent Individuals With Heroin Use Disorder: A Double-Blind Randomized Placebo-Controlled Trial.",
+      "authors": [
+        "Hurd YL",
+        "Spriggs S",
+        "Alishayev J",
+        "Winkel G",
+        "Gurgov K",
+        "Kudrich C",
+        "Oprescu AM",
+        "Salsitz E"
+      ],
+      "journal": "American Journal of Psychiatry",
+      "year": 2019,
+      "volume": "176",
+      "issue": "11",
+      "pages": "911-922",
+      "doi": "10.1176/appi.ajp.2019.18101191",
+      "url": "https://pubmed.ncbi.nlm.nih.gov/31109198/",
+      "claim_language": "associated with",
+      "abstract_summary": "CBD (400/800 mg) significantly reduced cue-induced craving and anxiety vs placebo in heroin use disorder. Effects sustained 7 days after last dose. Reduced heart rate and cortisol. No cognitive effects. No serious adverse effects.",
+      "topic_tags": [
+        "CBD",
+        "opioid",
+        "heroin",
+        "craving",
+        "addiction",
+        "anxiety",
+        "RCT"
+      ],
+      "use_for_sections": [
+        "CBD for addiction",
+        "opioid use disorder",
+        "craving reduction",
+        "CBD for anxiety"
+      ]
+    },
+    {
+      "entry_id": "47",
+      "tier": "T3a",
+      "pmid": "30382443",
+      "title": "Brief Report: Cannabidiol-Rich Cannabis in Children with Autism Spectrum Disorder and Severe Behavioral Problems—A Retrospective Feasibility Study.",
+      "authors": [
+        "Aran A",
+        "Cassuto H",
+        "Lubotzky A",
+        "Wattad N",
+        "Hazan E"
+      ],
+      "journal": "Journal of Autism and Developmental Disorders",
+      "year": 2019,
+      "volume": "49",
+      "issue": "3",
+      "pages": "1284-1288",
+      "doi": "10.1007/s10803-018-3808-2",
+      "url": "https://pubmed.ncbi.nlm.nih.gov/30382443/",
+      "claim_language": "associated with",
+      "abstract_summary": "60 ASD children. 61% showed behavioral outbreaks much improved or very much improved. AEs: sleep disturbances 14%, irritability 9%, loss of appetite 9%. One serious psychotic event with high-THC product. Supports feasibility of CBD-based trials in ASD.",
+      "topic_tags": [
+        "autism",
+        "ASD",
+        "CBD",
+        "children",
+        "behavioral",
+        "retrospective"
+      ],
+      "use_for_sections": [
+        "CBD for autism",
+        "ASD",
+        "children and cannabis",
+        "behavioral disorders"
+      ]
+    },
+    {
+      "entry_id": "48",
+      "tier": "T3a",
+      "pmid": "29398248",
+      "title": "Epidemiological characteristics, safety and efficacy of medical cannabis in the elderly.",
+      "authors": [
+        "Abuhasira R",
+        "Schleider LB",
+        "Mechoulam R",
+        "Novack V"
+      ],
+      "journal": "European Journal of Internal Medicine",
+      "year": 2018,
+      "volume": "49",
+      "pages": "44-50",
+      "doi": "10.1016/j.ejim.2018.01.019",
+      "url": "https://pubmed.ncbi.nlm.nih.gov/29398248/",
+      "claim_language": "associated with",
+      "abstract_summary": "2736 patients >65 years. Pain reduced from median 8 to 4/10 after 6 months. 93.7% reported condition improvement. 18.1% reduced or stopped opioids. Main AEs: dizziness 9.7%, dry mouth 7.1%. Cannabis safe and efficacious in elderly.",
+      "topic_tags": [
+        "elderly",
+        "medical cannabis",
+        "pain",
+        "opioid reduction",
+        "quality of life",
+        "cohort"
+      ],
+      "use_for_sections": [
+        "cannabis for elderly",
+        "pain management",
+        "opioid reduction",
+        "senior health"
+      ]
+    },
+    {
+      "entry_id": "49",
+      "tier": "T3a",
+      "pmid": "34839061",
+      "title": "Cannabidiol for the Management of Endometriosis and Chronic Pelvic Pain.",
+      "authors": [
+        "Mistry M",
+        "Simpson P",
+        "Morris E",
+        "Fritz AK",
+        "Karavadra B",
+        "Lennox C",
+        "Prosser-Snelling E"
+      ],
+      "journal": "Journal of Minimally Invasive Gynecology",
+      "year": 2022,
+      "volume": "29",
+      "issue": "2",
+      "pages": "169-176",
+      "doi": "10.1016/j.jmig.2021.11.017",
+      "url": "https://pubmed.ncbi.nlm.nih.gov/34839061/",
+      "claim_language": "associated with",
+      "abstract_summary": "Review of cannabis-based products for endometriosis. Most evidence from preclinical models. Survey studies affected by bias. Cannot recommend CBD/cannabis in UK due to insufficient evidence. More human trials urgently needed.",
+      "topic_tags": [
+        "endometriosis",
+        "pelvic pain",
+        "CBD",
+        "cannabis",
+        "women's health",
+        "review"
+      ],
+      "use_for_sections": [
+        "CBD for endometriosis",
+        "pelvic pain",
+        "women's health",
+        "pain management"
+      ]
+    },
+    {
+      "entry_id": "51",
+      "tier": "T3a",
+      "pmid": "19228182",
+      "title": "The use of a synthetic cannabinoid in the management of treatment-resistant nightmares in posttraumatic stress disorder (PTSD).",
+      "authors": [
+        "Fraser GA"
+      ],
+      "journal": "CNS Neuroscience & Therapeutics",
+      "year": 2009,
+      "volume": "15",
+      "issue": "1",
+      "pages": "84-8",
+      "doi": "10.1111/j.1755-5949.2008.00071.x",
+      "url": "https://pubmed.ncbi.nlm.nih.gov/19228182/",
+      "claim_language": "associated with",
+      "abstract_summary": "47 PTSD patients with treatment-resistant nightmares. 72% experienced cessation or significant reduction in nightmares after nabilone. Subjective improvements in sleep time and quality. First report of nabilone for PTSD nightmares.",
+      "topic_tags": [
+        "PTSD",
+        "nightmares",
+        "nabilone",
+        "sleep",
+        "synthetic cannabinoid"
+      ],
+      "use_for_sections": [
+        "cannabis for PTSD",
+        "nightmares",
+        "sleep disorders",
+        "nabilone"
+      ]
+    },
+    {
+      "entry_id": "53",
+      "tier": "T3a",
+      "pmid": "34452386",
+      "title": "Cannabis and Inflammation in HIV: A Review of Human and Animal Studies.",
+      "authors": [
+        "Ellis RJ",
+        "Wilson N",
+        "Peterson S"
+      ],
+      "journal": "Viruses",
+      "year": 2021,
+      "volume": "13",
+      "issue": "8",
+      "pages": null,
+      "doi": "10.3390/v13081521",
+      "url": "https://pubmed.ncbi.nlm.nih.gov/34452386/",
+      "claim_language": "associated with",
+      "abstract_summary": "Cannabinoids anti-inflammatory in HIV. Anti-inflammatory actions mediated through ECS in gut and gut-blood barrier stabilization. CBD particularly important as anti-inflammatory. Cannabis may reduce morbidity from inflammation in PWH.",
+      "topic_tags": [
+        "HIV",
+        "cannabis",
+        "inflammation",
+        "ECS",
+        "gut barrier",
+        "CBD",
+        "microbiome"
+      ],
+      "use_for_sections": [
+        "cannabis anti-inflammatory",
+        "HIV",
+        "gut health",
+        "ECS and inflammation"
+      ]
+    },
+    {
+      "entry_id": "54",
+      "tier": "T3a",
+      "pmid": "33998874",
+      "title": "The Long-Term, Prospective, Therapeutic Impact of Cannabis on Post-Traumatic Stress Disorder.",
+      "authors": [
+        "Bonn-Miller MO",
+        "Brunstetter M",
+        "Simonian A",
+        "Loflin MJ",
+        "Vandrey R",
+        "Babson KA",
+        "Wortzel H"
+      ],
+      "journal": "Cannabis and Cannabinoid Research",
+      "year": 2022,
+      "volume": "7",
+      "issue": "2",
+      "pages": "214-223",
+      "doi": "10.1089/can.2020.0056",
+      "url": "https://pubmed.ncbi.nlm.nih.gov/33998874/",
+      "claim_language": "associated with",
+      "abstract_summary": "150 participants, 1-year prospective study. Cannabis users showed greater decrease in PTSD severity over time. 2.57x more likely to no longer meet DSM-5 PTSD criteria vs non-users. Dispensary cannabis shows promise as alternative treatment.",
+      "topic_tags": [
+        "PTSD",
+        "cannabis",
+        "prospective",
+        "cohort",
+        "dispensary",
+        "DSM-5"
+      ],
+      "use_for_sections": [
+        "cannabis for PTSD",
+        "mental health",
+        "trauma",
+        "longitudinal outcomes"
+      ]
+    },
+    {
+      "entry_id": "56",
+      "tier": "T3a",
+      "pmid": "33479342",
+      "title": "Positive expectations predict improved mental-health outcomes linked to psychedelic microdosing.",
+      "authors": [
+        "Kaertner LS",
+        "Steinborn MB",
+        "Kettner H",
+        "Spriggs MJ",
+        "Roseman L",
+        "Buchborn T",
+        "Balaet M",
+        "Timmermann C",
+        "Erritzoe D",
+        "Carhart-Harris RL"
+      ],
+      "journal": "Scientific Reports",
+      "year": 2021,
+      "volume": "11",
+      "issue": "1",
+      "pages": "1941",
+      "doi": "10.1038/s41598-021-81446-7",
+      "url": "https://pubmed.ncbi.nlm.nih.gov/33479342/",
+      "claim_language": "associated with",
+      "abstract_summary": "81 participants, 4-week microdosing study. Improved wellbeing, reduced anxiety and depression reported. However, positive expectancy scores predicted improvements — significant placebo response identified. Cautions against overstating therapeutic value of microdosing.",
+      "topic_tags": [
+        "microdosing",
+        "psilocybin",
+        "LSD",
+        "mental health",
+        "placebo",
+        "wellbeing",
+        "psychedelics"
+      ],
+      "use_for_sections": [
+        "microdosing",
+        "psychedelics",
+        "psilocybin wellness",
+        "placebo effects"
+      ]
+    },
+    {
+      "entry_id": "57",
+      "tier": "T3a",
+      "pmid": "39655749",
+      "title": "Psychedelics as an intervention for psychological, existential distress in terminally ill patients: A systematic review and network meta-analysis.",
+      "authors": [
+        "Marchi M",
+        "Farina R",
+        "Rachedi K",
+        "Laonigro F",
+        "Zuljević MF",
+        "Pingani L",
+        "Ferrari S",
+        "Somers M",
+        "Boks MPM",
+        "Galeazzi GM"
+      ],
+      "journal": "Journal of Psychopharmacology",
+      "year": 2024,
+      "volume": null,
+      "pages": "2698811241303594",
+      "doi": "10.1177/02698811241303594",
+      "url": "https://pubmed.ncbi.nlm.nih.gov/39655749/",
+      "claim_language": "associated with",
+      "abstract_summary": "9 RCTs, 606 participants. Psychedelics effective for depression (SMD -0.80) and anxiety (SMD -0.84) in terminal illness. Psilocybin best for depression; LSD best for anxiety. Tolerability comparable to controls. Blinding limitations noted.",
+      "topic_tags": [
+        "psilocybin",
+        "LSD",
+        "terminal illness",
+        "existential distress",
+        "end of life",
+        "meta-analysis"
+      ],
+      "use_for_sections": [
+        "psilocybin for end-of-life",
+        "terminal illness",
+        "existential distress",
+        "psychedelics"
+      ]
+    },
+    {
+      "entry_id": "58",
+      "tier": "T3a",
+      "pmid": "23220273",
+      "title": "Cannabis effects on driving skills.",
+      "authors": [
+        "Hartman RL",
+        "Huestis MA"
+      ],
+      "journal": "Clinical Chemistry",
+      "year": 2013,
+      "volume": "59",
+      "issue": "3",
+      "pages": "478-92",
+      "doi": "10.1373/clinchem.2012.194381",
+      "url": "https://pubmed.ncbi.nlm.nih.gov/23220273/",
+      "claim_language": "associated with",
+      "abstract_summary": "Epidemiologic: ~2x increased MVA risk after cannabis smoking. Blood THC 2-5 ng/mL associated with substantial impairment in occasional smokers. Cannabis increases lane weaving, impairs cognition, reaction time. Combining with alcohol enhances impairment.",
+      "topic_tags": [
+        "driving",
+        "cannabis",
+        "impairment",
+        "THC",
+        "traffic safety",
+        "MVA"
+      ],
+      "use_for_sections": [
+        "cannabis and driving",
+        "safety",
+        "impairment",
+        "responsible use",
+        "legal"
+      ]
+    },
+    {
+      "entry_id": "55",
+      "tier": "T3b",
+      "pmid": "29783790",
+      "title": "Quality Traits of 'Cannabidiol Oils': Cannabinoids Content, Terpene Fingerprint and Oxidation Stability of European Commercially Available Preparations.",
+      "authors": [
+        "Pavlovic R",
+        "Nenna G",
+        "Calvi L",
+        "Panseri S",
+        "Borgonovo G",
+        "Giupponi L",
+        "Cannazza G",
+        "Giorgi A"
+      ],
+      "journal": "Molecules",
+      "year": 2018,
+      "volume": "23",
+      "issue": "5",
+      "pages": null,
+      "doi": "10.3390/molecules23051230",
+      "url": "https://pubmed.ncbi.nlm.nih.gov/29783790/",
+      "claim_language": "evidence suggests",
+      "abstract_summary": "14 commercial European CBD oils tested. 9/14 had cannabinoid concentrations differing notably from declared amount. Wide variability in cannabinoid profiles. Terpene fingerprint as quality indicator. Strict standardized regulations needed.",
+      "topic_tags": [
+        "CBD oil",
+        "quality",
+        "labeling",
+        "mislabeling",
+        "regulation",
+        "European",
+        "terpenes"
+      ],
+      "use_for_sections": [
+        "CBD product quality",
+        "mislabeling",
+        "regulation",
+        "consumer safety",
+        "CBD oil standards"
+      ]
+    },
+    {
+      "entry_id": "66",
+      "tier": "T3b",
+      "pmid": "31881765",
+      "title": "Antioxidative and Anti-Inflammatory Properties of Cannabidiol.",
+      "authors": [
+        "Atalay S",
+        "Jarocka-Karpowicz I",
+        "Skrzydlewska E"
+      ],
+      "journal": "Antioxidants (Basel)",
+      "year": 2019,
+      "volume": "9",
+      "issue": "1",
+      "pages": null,
+      "doi": "10.3390/antiox9010021",
+      "url": "https://pubmed.ncbi.nlm.nih.gov/31881765/",
+      "claim_language": "evidence suggests",
+      "abstract_summary": "Review of CBD's antioxidative and anti-inflammatory properties. Multiple molecular targets including cannabinoid receptors, ECS components. Preclinical and clinical evidence for therapeutic potential in oxidative stress-associated diseases.",
+      "topic_tags": [
+        "CBD",
+        "antioxidant",
+        "anti-inflammatory",
+        "oxidative stress",
+        "mechanism",
+        "pharmacology"
+      ],
+      "use_for_sections": [
+        "CBD anti-inflammatory",
+        "CBD antioxidant",
+        "mechanism",
+        "CBD pharmacology"
+      ]
+    },
+    {
+      "entry_id": "67",
+      "tier": "T3b",
+      "pmid": "30152161",
+      "title": "Medicinal Properties of Cannabinoids, Terpenes, and Flavonoids in Cannabis, and Benefits in Migraine, Headache, and Pain: An Update on Current Evidence and Cannabis Science.",
+      "authors": [
+        "Baron EP"
+      ],
+      "journal": "Headache",
+      "year": 2018,
+      "volume": "58",
+      "issue": "7",
+      "pages": "1139-1186",
+      "doi": "10.1111/head.13345",
+      "url": "https://pubmed.ncbi.nlm.nih.gov/30152161/",
+      "claim_language": "evidence suggests",
+      "abstract_summary": "Comprehensive review of cannabinoids, terpenes, flavonoids for migraine, headache, and pain. Synergistic entourage effects. Cannabis may assist opioid detoxification. Individual medicinal properties of each compound reviewed. Supports strain-specific breeding.",
+      "topic_tags": [
+        "terpenes",
+        "cannabinoids",
+        "migraine",
+        "headache",
+        "pain",
+        "entourage effect",
+        "flavonoids"
+      ],
+      "use_for_sections": [
+        "terpenes",
+        "cannabis for headache",
+        "migraine",
+        "pain",
+        "entourage effect"
+      ]
+    },
+    {
+      "entry_id": "68",
+      "tier": "T3b",
+      "pmid": "41178006",
+      "title": "The Therapeutic Potential of Cannabidiol in Skin Conditions.",
+      "authors": [
+        "Redmond MC",
+        "Finn DP"
+      ],
+      "journal": "Journal of Cosmetic Dermatology",
+      "year": 2025,
+      "volume": "24",
+      "issue": "11",
+      "pages": "e70527",
+      "doi": "10.1111/jocd.70527",
+      "url": "https://pubmed.ncbi.nlm.nih.gov/41178006/",
+      "claim_language": "evidence suggests",
+      "abstract_summary": "Review of CBD in dermatology. Preclinical: promising for acne, psoriasis, dermatitis. Limited clinical evidence but multiple trials ongoing. CBD may improve skin hydration, elasticity, anti-aging. Multiple molecular skin targets identified.",
+      "topic_tags": [
+        "CBD",
+        "skin",
+        "acne",
+        "psoriasis",
+        "dermatitis",
+        "topical",
+        "cosmetic",
+        "dermatology"
+      ],
+      "use_for_sections": [
+        "CBD for skin",
+        "topical CBD",
+        "acne",
+        "psoriasis",
+        "dermatitis",
+        "CBD cosmetics"
+      ]
+    },
+    {
+      "entry_id": "69",
+      "tier": "T3b",
+      "pmid": "22214537",
+      "title": "Endocannabinoid signaling, glucocorticoid-mediated negative feedback, and regulation of the hypothalamic-pituitary-adrenal axis.",
+      "authors": [
+        "Hill MN",
+        "Tasker JG"
+      ],
+      "journal": "Neuroscience",
+      "year": 2012,
+      "volume": "204",
+      "pages": "5-16",
+      "doi": "10.1016/j.neuroscience.2011.12.030",
+      "url": "https://pubmed.ncbi.nlm.nih.gov/22214537/",
+      "claim_language": "evidence suggests",
+      "abstract_summary": "Review of ECS regulation of HPA axis. Endocannabinoids act in prefrontal cortex, amygdala, and hypothalamus to suppress HPA axis. Anandamide and 2-AG have distinct roles in basal, acute stress, and glucocorticoid feedback phases.",
+      "topic_tags": [
+        "ECS",
+        "HPA axis",
+        "stress",
+        "cortisol",
+        "glucocorticoid",
+        "amygdala",
+        "hypothalamus"
+      ],
+      "use_for_sections": [
+        "ECS and stress",
+        "CBD for stress",
+        "anxiety mechanism",
+        "cortisol"
+      ]
+    },
+    {
+      "entry_id": "70",
+      "tier": "T3b",
+      "pmid": "26269227",
+      "title": "Early Phase in the Development of Cannabidiol as a Treatment for Addiction: Opioid Relapse Takes Initial Center Stage.",
+      "authors": [
+        "Hurd YL",
+        "Yoon M",
+        "Manini AF",
+        "Hernandez S",
+        "Olmedo R",
+        "Ostman M",
+        "Jutras-Aswad D"
+      ],
+      "journal": "Neurotherapeutics",
+      "year": 2015,
+      "volume": "12",
+      "issue": "4",
+      "pages": "807-15",
+      "doi": "10.1007/s13311-015-0373-7",
+      "url": "https://pubmed.ncbi.nlm.nih.gov/26269227/",
+      "claim_language": "evidence suggests",
+      "abstract_summary": "Translational review. CBD inhibits drug-seeking behavior, has low reinforcing properties, anxiolytic. Distinct from THC (rewarding, sensitizing). CBD investigations primarily in opioid drugs. Foundation for further exploration as opioid relapse treatment.",
+      "topic_tags": [
+        "CBD",
+        "opioid relapse",
+        "addiction",
+        "translational",
+        "drug-seeking",
+        "reward"
+      ],
+      "use_for_sections": [
+        "CBD for addiction",
+        "opioid relapse",
+        "cannabis vs opioids"
+      ]
+    },
+    {
+      "entry_id": "71",
+      "tier": "T3b",
+      "pmid": "20532878",
+      "title": "Cannabinoids and bone: friend or foe?",
+      "authors": [
+        "Idris AI",
+        "Ralston SH"
+      ],
+      "journal": "Calcified Tissue International",
+      "year": 2010,
+      "volume": "87",
+      "issue": "4",
+      "pages": "285-97",
+      "doi": "10.1007/s00223-010-9378-8",
+      "url": "https://pubmed.ncbi.nlm.nih.gov/20532878/",
+      "claim_language": "evidence suggests",
+      "abstract_summary": "Review of ECS in bone metabolism. CB1 deficiency: high peak bone mass but age-related osteoporosis. CB2 deficiency: increased bone turnover. GPR55 deficiency: increased bone mass. Cannabinoids in synovial tissue effective in inflammatory arthritis preclinical models.",
+      "topic_tags": [
+        "cannabinoids",
+        "bone",
+        "osteoporosis",
+        "CB1",
+        "CB2",
+        "GPR55",
+        "arthritis"
+      ],
+      "use_for_sections": [
+        "cannabis and bone health",
+        "osteoporosis",
+        "arthritis",
+        "ECS mechanisms"
+      ]
+    },
+    {
+      "entry_id": "72",
+      "tier": "T3b",
+      "pmid": "32504461",
+      "title": "Critical Aspects Affecting Cannabidiol Oral Bioavailability and Metabolic Elimination, and Related Clinical Implications.",
+      "authors": [
+        "Perucca E",
+        "Bialer M"
+      ],
+      "journal": "CNS Drugs",
+      "year": 2020,
+      "volume": "34",
+      "issue": "8",
+      "pages": "795-800",
+      "doi": "10.1007/s40263-020-00741-5",
+      "url": "https://pubmed.ncbi.nlm.nih.gov/32504461/",
+      "claim_language": "evidence suggests",
+      "abstract_summary": "CBD oral bioavailability ~6% fasting; increases fourfold with high-fat meal. 70-75% of absorbed dose removed by first-pass hepatic metabolism. Improved formulations could increase absorption 4x. High hepatic clearance has DDI implications. Clinical variability concerns.",
+      "topic_tags": [
+        "CBD",
+        "bioavailability",
+        "pharmacokinetics",
+        "food effect",
+        "high fat meal",
+        "metabolism",
+        "formulation"
+      ],
+      "use_for_sections": [
+        "CBD dosing",
+        "CBD absorption",
+        "CBD with food",
+        "pharmacokinetics",
+        "bioavailability"
+      ]
+    },
+    {
+      "entry_id": "74",
+      "tier": "T3b",
+      "pmid": "24210682",
+      "title": "The cannabinoid CB2 receptor-selective phytocannabinoid beta-caryophyllene exerts analgesic effects in mouse models of inflammatory and neuropathic pain.",
+      "authors": [
+        "Klauke AL",
+        "Racz I",
+        "Pradier B",
+        "Markert A",
+        "Zimmer AM",
+        "Gertsch J",
+        "Zimmer A"
+      ],
+      "journal": "European Neuropsychopharmacology",
+      "year": 2014,
+      "volume": "24",
+      "issue": "4",
+      "pages": "608-20",
+      "doi": "10.1016/j.euroneuro.2013.10.008",
+      "url": "https://pubmed.ncbi.nlm.nih.gov/24210682/",
+      "claim_language": "evidence suggests",
+      "abstract_summary": "Oral BCP reduced inflammatory and neuropathic pain via CB2. Reduced spinal neuroinflammation. No tolerance after prolonged treatment. More effective than subcutaneous synthetic CB2 agonist. Natural dietary compound with pain-modulating potential.",
+      "topic_tags": [
+        "beta-caryophyllene",
+        "terpenes",
+        "CB2",
+        "pain",
+        "anti-inflammatory",
+        "neuropathic pain"
+      ],
+      "use_for_sections": [
+        "terpenes",
+        "beta-caryophyllene",
+        "pain",
+        "CB2 receptor",
+        "entourage effect"
+      ]
+    },
+    {
+      "entry_id": "77",
+      "tier": "T3b",
+      "pmid": "18426506",
+      "title": "The cannabinoid system and male reproductive functions.",
+      "authors": [
+        "Rossato M",
+        "Pagano C",
+        "Vettor R"
+      ],
+      "journal": "Journal of Neuroendocrinology",
+      "year": 2008,
+      "volume": "20 Suppl 1",
+      "pages": "90-3",
+      "doi": "10.1111/j.1365-2826.2008.01680.x",
+      "url": "https://pubmed.ncbi.nlm.nih.gov/18426506/",
+      "claim_language": "evidence suggests",
+      "abstract_summary": "Review of cannabinoid effects on male reproduction. Cannabis adversely affects hypothalamic-hypophyseal hormones and testicular function. Cannabinoids negatively influence sperm motility and acrosome reaction via CNR1 in mature sperm.",
+      "topic_tags": [
+        "cannabis",
+        "male fertility",
+        "sperm",
+        "testosterone",
+        "reproductive",
+        "CNR1"
+      ],
+      "use_for_sections": [
+        "cannabis and fertility",
+        "male reproductive health",
+        "sperm",
+        "hormones"
+      ]
+    },
+    {
+      "entry_id": "78",
+      "tier": "T3b",
+      "pmid": "39988819",
+      "title": "Hericium erinaceus: A possible future therapeutic treatment for the prevention and delayed progression of Alzheimer's disease? - A narrative review.",
+      "authors": [
+        "Cornford N",
+        "Charnley M"
+      ],
+      "journal": "Nutrition Research Reviews",
+      "year": 2025,
+      "volume": "38",
+      "issue": "2",
+      "pages": "613-627",
+      "doi": "10.1017/S0954422425000058",
+      "url": "https://pubmed.ncbi.nlm.nih.gov/39988819/",
+      "claim_language": "evidence suggests",
+      "abstract_summary": "3 RCTs + 13 animal studies reviewed. HE demonstrated positive cognitive, histological, and biochemical outcomes. Erinacine-A enriched HE highest potency, crosses biological barriers. Evidence suggests HE may delay Alzheimer's progression.",
+      "topic_tags": [
+        "lion's mane",
+        "Hericium erinaceus",
+        "Alzheimer's",
+        "erinacine",
+        "neuroprotection",
+        "dementia"
+      ],
+      "use_for_sections": [
+        "Lion's Mane",
+        "Alzheimer's",
+        "dementia",
+        "neuroprotection",
+        "functional mushrooms"
+      ]
+    },
+    {
+      "entry_id": "79",
+      "tier": "T3b",
+      "pmid": "36111653",
+      "title": "Animal evidence considered in determination of cannabis smoke and delta-tetrahydrocannabinol as causing reproductive toxicity (developmental endpoint); Part II. Neurodevelopmental effects.",
+      "authors": [
+        "Iyer P",
+        "Niknam Y",
+        "Campbell M",
+        "Moran F",
+        "Kaufman F",
+        "Kim A",
+        "Sandy M",
+        "Zeise L"
+      ],
+      "journal": "Birth Defects Research",
+      "year": 2022,
+      "volume": "114",
+      "issue": "18",
+      "pages": "1155-1168",
+      "doi": "10.1002/bdr2.2084",
+      "url": "https://pubmed.ncbi.nlm.nih.gov/36111653/",
+      "claim_language": "evidence suggests",
+      "abstract_summary": "Review of animal studies on prenatal/perinatal THC exposure. Cognitive impairment, memory deficits, anxiety, increased drug sensitivity in offspring. Altered synaptic plasticity genes in nucleus accumbens. Cross-generational epigenetic effects. Basis for California Prop 65 listing.",
+      "topic_tags": [
+        "prenatal cannabis",
+        "THC",
+        "neurodevelopment",
+        "epigenetics",
+        "offspring",
+        "developmental toxicity"
+      ],
+      "use_for_sections": [
+        "cannabis in pregnancy",
+        "fetal exposure",
+        "developmental risks",
+        "safety warnings"
+      ]
+    },
+    {
+      "entry_id": "80",
+      "tier": "T3b",
+      "pmid": "36985456",
+      "title": "Potential Anti-Rheumatoid Arthritis Activities and Mechanisms of Ganoderma lucidum Polysaccharides.",
+      "authors": [
+        "Meng M",
+        "Yao J",
+        "Zhang Y",
+        "Sun H",
+        "Liu M"
+      ],
+      "journal": "Molecules",
+      "year": 2023,
+      "volume": "28",
+      "issue": "6",
+      "pages": null,
+      "doi": "10.3390/molecules28062483",
+      "url": "https://pubmed.ncbi.nlm.nih.gov/36985456/",
+      "claim_language": "evidence suggests",
+      "abstract_summary": "Review of Ganoderma lucidum polysaccharides (GLP) for RA. GLP inhibits synovial fibroblast proliferation, modulates inflammatory cytokines, reduces angiogenesis, protects cartilage and bone. Promising therapeutic agent for RA.",
+      "topic_tags": [
+        "reishi",
+        "Ganoderma lucidum",
+        "polysaccharides",
+        "rheumatoid arthritis",
+        "immunomodulation",
+        "anti-inflammatory"
+      ],
+      "use_for_sections": [
+        "Reishi",
+        "rheumatoid arthritis",
+        "functional mushrooms",
+        "anti-inflammatory"
+      ]
+    },
+    {
+      "entry_id": "75",
+      "tier": "T3b",
+      "pmid": "37555675",
+      "title": "Emerging Perspectives in Addiction Psychiatry.",
+      "authors": [
+        "Jordan A"
+      ],
+      "journal": "The Journal of Clinical Psychiatry",
+      "year": 2023,
+      "volume": "84",
+      "issue": "4",
+      "pages": null,
+      "doi": "10.4088/JCP.84.4",
+      "url": "https://pubmed.ncbi.nlm.nih.gov/37555675/",
+      "claim_language": "evidence suggests",
+      "abstract_summary": "Review of addiction psychiatry perspectives. Psilocybin shows potential for depression, anxiety, alcohol use disorder, and opioid withdrawal symptom reduction. Comprehensive public health approach to SUD essential. FDA breakthrough therapy designation mentioned.",
+      "topic_tags": [
+        "psilocybin",
+        "addiction",
+        "alcohol use disorder",
+        "opioid withdrawal",
+        "SUD",
+        "psychedelics"
+      ],
+      "use_for_sections": [
+        "psilocybin for addiction",
+        "alcohol treatment",
+        "opioid withdrawal",
+        "SUD"
+      ]
+    },
+    {
+      "entry_id": "86",
+      "tier": "T4",
+      "pmid": "37072467",
+      "title": "CBGA ameliorates inflammation and fibrosis in nephropathy.",
+      "authors": [
+        "Suzuki S",
+        "Fleig A",
+        "Penner R"
+      ],
+      "journal": "Scientific Reports",
+      "year": 2023,
+      "volume": "13",
+      "issue": "1",
+      "pages": "6341",
+      "doi": "10.1038/s41598-023-33507-2",
+      "url": "https://pubmed.ncbi.nlm.nih.gov/37072467/",
+      "claim_language": "shown in preclinical models",
+      "abstract_summary": "CBGA protects kidneys from cisplatin-induced nephrotoxicity (CBD does not). CBGA suppresses inflammatory cytokines more effectively. Both reduce fibrosis in UUO chronic kidney model. CBGA inhibits TRPM7 channel-kinase. CBGA > CBD for kidney protection.",
+      "topic_tags": [
+        "CBGA",
+        "CBG",
+        "kidney",
+        "nephrotoxicity",
+        "cisplatin",
+        "fibrosis",
+        "TRPM7",
+        "preclinical"
+      ],
+      "use_for_sections": [
+        "CBGA",
+        "CBG",
+        "kidney health",
+        "anti-inflammatory",
+        "minor cannabinoids"
+      ]
+    },
+    {
+      "entry_id": "88",
+      "tier": "T4",
+      "pmid": "33998900",
+      "title": "The Effects of Cannabinoids on Pro- and Anti-Inflammatory Cytokines: A Systematic Review of In Vitro Studies.",
+      "authors": [
+        "Henshaw FR",
+        "Dewsbury LS",
+        "Lim CK",
+        "Steiner GZ"
+      ],
+      "journal": "Cannabis and Cannabinoid Research",
+      "year": 2021,
+      "volume": "6",
+      "issue": "3",
+      "pages": "177-195",
+      "doi": "10.1089/can.2020.0105",
+      "url": "https://pubmed.ncbi.nlm.nih.gov/33998900/",
+      "claim_language": "shown in preclinical models",
+      "abstract_summary": "26 in vitro studies. CBD, CBG, CBD+THC consistently reduced TNF-alpha, IL-1B, IL-6, IFN-gamma. THC alone did not reduce pro-inflammatory cytokines. CBD and CBG have predominantly anti-inflammatory profile. Informs future clinical trials.",
+      "topic_tags": [
+        "CBD",
+        "CBG",
+        "cytokines",
+        "anti-inflammatory",
+        "TNF-alpha",
+        "in vitro",
+        "preclinical"
+      ],
+      "use_for_sections": [
+        "CBD anti-inflammatory",
+        "CBG",
+        "inflammation mechanism",
+        "cytokines"
+      ]
+    },
+    {
+      "entry_id": "89",
+      "tier": "T4",
+      "pmid": "31897571",
+      "title": "Effect of combined doses of delta-tetrahydrocannabinol and cannabidiol or tetrahydrocannabinolic acid and cannabidiolic acid on acute nausea in male Sprague-Dawley rats.",
+      "authors": [
+        "Rock EM",
+        "Sullivan MT",
+        "Pravato S",
+        "Pratt M",
+        "Limebeer CL",
+        "Parker LA"
+      ],
+      "journal": "Psychopharmacology",
+      "year": 2020,
+      "volume": "237",
+      "issue": "3",
+      "pages": "901-914",
+      "doi": "10.1007/s00213-019-05428-4",
+      "url": "https://pubmed.ncbi.nlm.nih.gov/31897571/",
+      "claim_language": "shown in preclinical models",
+      "abstract_summary": "Rat conditioned gaping model. CBDA+THCA at very low doses robustly reduce nausea via 5-HT1A and PPARα receptors. CBD+THC combination anti-nauseatic via 5-HT1A and CB1. Subthreshold combination doses more effective. Clinical trials warranted.",
+      "topic_tags": [
+        "CBDA",
+        "THCA",
+        "nausea",
+        "antiemetic",
+        "5-HT1A",
+        "PPARa",
+        "rat model"
+      ],
+      "use_for_sections": [
+        "CBDA",
+        "THCA",
+        "raw cannabis",
+        "nausea",
+        "antiemetic",
+        "chemotherapy nausea"
+      ]
+    },
+    {
+      "entry_id": "90",
+      "tier": "T4",
+      "pmid": "38140277",
+      "title": "Acute Effects of Naturally Occurring Guayusa Tea and Nordic Lion's Mane Extracts on Cognitive Performance.",
+      "authors": [
+        "La Monica MB",
+        "Raub B",
+        "Ziegenfuss EJ",
+        "Hartshorn S",
+        "Grdic J",
+        "Gustat A",
+        "Sandrock J",
+        "Ziegenfuss TN"
+      ],
+      "journal": "Nutrients",
+      "year": 2023,
+      "volume": "15",
+      "issue": "24",
+      "pages": null,
+      "doi": "10.3390/nu15245018",
+      "url": "https://pubmed.ncbi.nlm.nih.gov/38140277/",
+      "claim_language": "shown in preclinical models",
+      "abstract_summary": "Double-blind RCT, single dose of 1g Lion's Mane. Improved working memory (N-Back reaction time), complex attention (Serial 7s), and Go stimulus reaction time at 2h post-ingestion. Improved subjective happiness ratings. Well tolerated.",
+      "topic_tags": [
+        "Lion's Mane",
+        "Hericium erinaceus",
+        "cognition",
+        "memory",
+        "attention",
+        "RCT",
+        "nootropic"
+      ],
+      "use_for_sections": [
+        "Lion's Mane cognition",
+        "memory",
+        "focus",
+        "nootropics",
+        "functional mushrooms"
+      ]
+    },
+    {
+      "entry_id": "91",
+      "tier": "T4",
+      "pmid": "38398467",
+      "title": "Exploring the Therapeutic Potential of Ganoderma lucidum in Cancer.",
+      "authors": [
+        "Cancemi G",
+        "Caserta S",
+        "Gangemi S",
+        "Pioggia G",
+        "Allegra A"
+      ],
+      "journal": "Journal of Clinical Medicine",
+      "year": 2024,
+      "volume": "13",
+      "issue": "4",
+      "pages": null,
+      "doi": "10.3390/jcm13041153",
+      "url": "https://pubmed.ncbi.nlm.nih.gov/38398467/",
+      "claim_language": "shown in preclinical models",
+      "abstract_summary": "Reishi ganoderic acid tested in 26 cancer cell types; anti-proliferative especially in leukemia, lymphoma, myeloma. Mechanisms: immune stimulation, MAP-K activation, apoptosis induction. In vivo: promotes T/B cell precursor differentiation and NK activity.",
+      "topic_tags": [
+        "Reishi",
+        "Ganoderma lucidum",
+        "cancer",
+        "leukemia",
+        "lymphoma",
+        "ganoderic acid",
+        "apoptosis"
+      ],
+      "use_for_sections": [
+        "Reishi",
+        "cancer support",
+        "functional mushrooms",
+        "immune system",
+        "hematological cancer"
+      ]
+    },
+    {
+      "entry_id": "92",
+      "tier": "T4",
+      "pmid": "40959699",
+      "title": "Benefits, side effects, and uses of Hericium erinaceus as a supplement: a systematic review.",
+      "authors": [
+        "Menon A",
+        "Jalal A",
+        "Arshad Z",
+        "Nawaz FA",
+        "Kashyap R"
+      ],
+      "journal": "Frontiers in Nutrition",
+      "year": 2025,
+      "volume": "12",
+      "pages": "1641246",
+      "doi": "10.3389/fnut.2025.1641246",
+      "url": "https://pubmed.ncbi.nlm.nih.gov/40959699/",
+      "claim_language": "shown in preclinical models",
+      "abstract_summary": "PRISMA systematic review. 5 RCTs + 15 lab + 3 pilot trials. HE improved cognitive scores in dementia patients. Inhibited leukemia/gastric cancer cells. Increased gut SCFA bacteria, reduced inflammation. Enhanced BDNF, hippocampal neurogenesis. Reduced depression, anxiety, sleep disorders.",
+      "topic_tags": [
+        "Lion's Mane",
+        "Hericium erinaceus",
+        "neuroprotection",
+        "cancer",
+        "gut health",
+        "depression",
+        "BDNF"
+      ],
+      "use_for_sections": [
+        "Lion's Mane",
+        "neuroprotection",
+        "gut health",
+        "mood",
+        "functional mushrooms",
+        "BDNF"
+      ]
+    },
+    {
+      "entry_id": "93",
+      "tier": "T4",
+      "pmid": "25252936",
+      "title": "Neuroprotective properties of cannabigerol in Huntington's disease: studies in R6/2 mice and 3-nitropropionate-lesioned mice.",
+      "authors": [
+        "Valdeolivas S",
+        "Navarrete C",
+        "Cantarero I",
+        "Bellido ML",
+        "Munoz E",
+        "Sagredo O"
+      ],
+      "journal": "Neurotherapeutics",
+      "year": 2015,
+      "volume": "12",
+      "issue": "1",
+      "pages": "185-99",
+      "doi": "10.1007/s13311-014-0304-z",
+      "url": "https://pubmed.ncbi.nlm.nih.gov/25252936/",
+      "claim_language": "shown in preclinical models",
+      "abstract_summary": "CBG extremely active neuroprotectant in 3NP Huntington's mouse model. Improved motor deficits, preserved striatal neurons, reduced microgliosis, improved antioxidant levels. Partial recovery in R6/2 mice. BDNF, IGF-1, PPARy improved. Reduced mutant huntingtin aggregation.",
+      "topic_tags": [
+        "CBG",
+        "cannabigerol",
+        "Huntington's disease",
+        "neuroprotection",
+        "mouse model",
+        "BDNF"
+      ],
+      "use_for_sections": [
+        "CBG",
+        "neuroprotection",
+        "Huntington's disease",
+        "neurodegeneration"
+      ]
+    },
+    {
+      "entry_id": "94",
+      "tier": "T4",
+      "pmid": "28885454",
+      "title": "Attenuation of early phase inflammation by cannabidiol prevents pain and nerve damage in rat osteoarthritis.",
+      "authors": [
+        "Philpott HT",
+        "O'Brien M",
+        "McDougall JJ"
+      ],
+      "journal": "Pain",
+      "year": 2017,
+      "volume": "158",
+      "issue": "12",
+      "pages": "2442-2451",
+      "doi": "10.1097/j.pain.0000000000001052",
+      "url": "https://pubmed.ncbi.nlm.nih.gov/28885454/",
+      "claim_language": "shown in preclinical models",
+      "abstract_summary": "CBD decreased OA joint afferent firing rate and increased weight bearing dose-dependently. Acute joint inflammation reduced by CBD. Prophylactic CBD prevented development of OA pain and nerve damage. Neuroprotective effect at 5 weeks. Safe and useful for OA joint neuropathic pain.",
+      "topic_tags": [
+        "CBD",
+        "osteoarthritis",
+        "pain",
+        "neuroprotection",
+        "joint",
+        "topical",
+        "preclinical"
+      ],
+      "use_for_sections": [
+        "CBD for joint pain",
+        "osteoarthritis",
+        "topical CBD",
+        "neuropathic pain"
+      ]
+    },
+    {
+      "entry_id": "95",
+      "tier": "T4",
+      "pmid": "39694962",
+      "title": "Immunopharmacological Insights into Cordyceps spp.: Harnessing Therapeutic Potential for Sepsis.",
+      "authors": [
+        "Saxena J",
+        "Agarwal G",
+        "Das S",
+        "Kumar A",
+        "Thakkar K",
+        "Kaushik S",
+        "Srivatsava VK",
+        "Siddiqui AJ",
+        "Jyoti A"
+      ],
+      "journal": "Current Pharmaceutical Design",
+      "year": 2025,
+      "volume": "31",
+      "issue": "11",
+      "pages": "823-842",
+      "doi": "10.2174/0113816128326301240920040036",
+      "url": "https://pubmed.ncbi.nlm.nih.gov/39694962/",
+      "claim_language": "shown in preclinical models",
+      "abstract_summary": "Cordyceps spp. contains nucleosides, sterols, flavonoids, phenolic compounds. Anti-inflammatory, antioxidant, antibacterial, immunomodulatory, organ-protective in sepsis models. Protects brain, liver, kidneys, lungs, heart. Clinical trials still needed.",
+      "topic_tags": [
+        "Cordyceps",
+        "immunomodulation",
+        "anti-inflammatory",
+        "antioxidant",
+        "sepsis",
+        "organ protection"
+      ],
+      "use_for_sections": [
+        "Cordyceps",
+        "functional mushrooms",
+        "immune support",
+        "anti-inflammatory",
+        "energy"
+      ]
+    },
+    {
+      "entry_id": "97",
+      "tier": "T4",
+      "pmid": "21740450",
+      "title": "CB1-independent mechanisms of delta9-THCV, AM251 and SR141716 (rimonabant).",
+      "authors": [
+        "Raffa RB",
+        "Ward SJ"
+      ],
+      "journal": "Journal of Clinical Pharmacy and Therapeutics",
+      "year": 2011,
+      "volume": "37",
+      "issue": "3",
+      "pages": "260-5",
+      "doi": "10.1111/j.1365-2710.2011.01284.x",
+      "url": "https://pubmed.ncbi.nlm.nih.gov/21740450/",
+      "claim_language": "shown in preclinical models",
+      "abstract_summary": "Review of CB1-independent mechanisms of THCV and related compounds. Effects in CB1-deficient cells, mu-opioid receptor affinity. Not purely CB1-selective. Important for understanding THCV pharmacotoxicology profile.",
+      "topic_tags": [
+        "THCV",
+        "CB1",
+        "pharmacology",
+        "mechanism",
+        "rimonabant",
+        "cannabinoid receptor"
+      ],
+      "use_for_sections": [
+        "THCV",
+        "minor cannabinoids",
+        "pharmacology",
+        "CB1 receptor"
+      ]
+    },
+    {
+      "entry_id": "98",
+      "tier": "T4",
+      "pmid": "20942863",
+      "title": "Non-psychoactive cannabinoids modulate the descending pathway of antinociception in anaesthetized rats through several mechanisms of action.",
+      "authors": [
+        "Maione S",
+        "Piscitelli F",
+        "Gatta L",
+        "Vita D",
+        "De Petrocellis L",
+        "Palazzo E",
+        "de Novellis V",
+        "Di Marzo V"
+      ],
+      "journal": "British Journal of Pharmacology",
+      "year": 2011,
+      "volume": "162",
+      "issue": "3",
+      "pages": "584-96",
+      "doi": "10.1111/j.1476-5381.2010.01063.x",
+      "url": "https://pubmed.ncbi.nlm.nih.gov/20942863/",
+      "claim_language": "shown in preclinical models",
+      "abstract_summary": "CBD and CBC reduced ON neuron activity and produced antinociception in rat pain model. Effects via CB1, adenosine A1, and TRPA1 receptors (not TRPV1). Both elevated endocannabinoid levels. Multiple mechanisms support analgesic potential.",
+      "topic_tags": [
+        "CBD",
+        "CBC",
+        "pain",
+        "antinociception",
+        "TRPA1",
+        "CB1",
+        "analgesia",
+        "rat model"
+      ],
+      "use_for_sections": [
+        "CBD for pain",
+        "CBC",
+        "minor cannabinoids",
+        "pain mechanism",
+        "TRPA1"
+      ]
+    },
+    {
+      "entry_id": "99",
+      "tier": "T4",
+      "pmid": "31052254",
+      "title": "Hepatotoxicity of a Cannabidiol-Rich Cannabis Extract in the Mouse Model.",
+      "authors": [
+        "Ewing LE",
+        "Skinner CM",
+        "Quick CM",
+        "Kennon-McGill S",
+        "McGill MR",
+        "Walker LA",
+        "ElSohly MA",
+        "Gurley BJ",
+        "Koturbash I"
+      ],
+      "journal": "Molecules",
+      "year": 2019,
+      "volume": "24",
+      "issue": "9",
+      "pages": null,
+      "doi": "10.3390/molecules24091694",
+      "url": "https://pubmed.ncbi.nlm.nih.gov/31052254/",
+      "claim_language": "shown in preclinical models",
+      "abstract_summary": "Mouse hepatotoxicity study. High-dose CBD (2460 mg/kg acute; 615 mg/kg sub-acute) caused liver weight increase, elevated ALT/AST/bilirubin. 75% of 615 mg/kg mice became moribund at day 3-4. Oxidative stress, lipid metabolism, CYP enzymes affected. Serious concerns about DDIs and safety at high doses.",
+      "topic_tags": [
+        "CBD",
+        "hepatotoxicity",
+        "liver",
+        "safety",
+        "high dose",
+        "drug interactions",
+        "mouse model"
+      ],
+      "use_for_sections": [
+        "CBD safety",
+        "CBD liver risk",
+        "high dose CBD",
+        "safety warnings",
+        "CBD dosing limits"
+      ]
+    },
+    {
+      "entry_id": "P1",
+      "tier": "T1",
+      "pmid": "40858059",
+      "title": "Psilocybin-assisted psychotherapy for depression and anxiety associated with life threatening illness: A phase 2b randomized controlled trial.",
+      "authors": [
+        "Ross ML",
+        "Iyer R",
+        "Williams ML",
+        "Boughey M",
+        "O'Callaghan C",
+        "Hiscock R",
+        "Dwyer J"
+      ],
+      "journal": "General Hospital Psychiatry",
+      "year": 2025,
+      "volume": "96",
+      "pages": "322-331",
+      "doi": "10.1016/j.genhosppsych.2025.08.001",
+      "url": "https://pubmed.ncbi.nlm.nih.gov/40858059/",
+      "claim_language": "demonstrates",
+      "abstract_summary": "Phase 2b RCT, 35 participants. Psilocybin 25mg vs niacin. Significant reductions in HADS depression, BDI-II and STAI-S anxiety at 6-7 weeks. Benefits sustained at 26 weeks. Enhanced spiritual wellbeing, QOL, reduced death anxiety and hopelessness. No serious adverse events.",
+      "topic_tags": [
+        "psilocybin",
+        "RCT",
+        "depression",
+        "anxiety",
+        "palliative",
+        "end of life",
+        "phase 2b"
+      ],
+      "use_for_sections": [
+        "psilocybin therapy",
+        "end-of-life care",
+        "depression treatment",
+        "anxiety treatment"
+      ]
+    },
+    {
+      "entry_id": "P2",
+      "tier": "T1",
+      "pmid": "27909164",
+      "title": "Rapid and sustained symptom reduction following psilocybin treatment for anxiety and depression in patients with life-threatening cancer: a randomized controlled trial.",
+      "authors": [
+        "Ross S",
+        "Bossis A",
+        "Guss J",
+        "Agin-Liebes G",
+        "Malone T",
+        "Cohen B",
+        "Mennenga SE",
+        "Belser A",
+        "Kalliontzi K",
+        "Babb J",
+        "Su Z",
+        "Corby P",
+        "Schmidt BL"
+      ],
+      "journal": "Journal of Psychopharmacology",
+      "year": 2016,
+      "volume": "30",
+      "issue": "12",
+      "pages": "1165-1180",
+      "doi": "10.1177/0269881116675512",
+      "url": "https://pubmed.ncbi.nlm.nih.gov/27909164/",
+      "claim_language": "demonstrates",
+      "abstract_summary": "Crossover RCT, 29 cancer patients. Single-dose psilocybin vs niacin + psychotherapy. Significant immediate improvements in anxiety and depression. At 6.5-month follow-up, 60-80% sustained clinically significant reductions. Improved existential distress, QOL, attitudes toward death.",
+      "topic_tags": [
+        "psilocybin",
+        "cancer",
+        "anxiety",
+        "depression",
+        "RCT",
+        "existential distress",
+        "mystical experience"
+      ],
+      "use_for_sections": [
+        "psilocybin for cancer",
+        "end-of-life",
+        "depression",
+        "anxiety",
+        "psychedelic therapy"
+      ]
+    },
+    {
+      "entry_id": "P3",
+      "tier": "T1",
+      "pmid": "35046508",
+      "title": "Dose-related effects of ketamine for antidepressant-resistant symptoms of posttraumatic stress disorder in veterans and active duty military: a double-blind, randomized, placebo-controlled multi-center clinical trial.",
+      "authors": [
+        "Abdallah CG",
+        "Roache JD",
+        "Gueorguieva R",
+        "Averill LA",
+        "Young-McCaughan S",
+        "Shiroma PR",
+        "Purohit P",
+        "Brundige A",
+        "Murff W",
+        "Ahn KH",
+        "Sherif MA",
+        "Baltutis EJ",
+        "Ranganathan M",
+        "D'Souza D",
+        "Martini B",
+        "Southwick SM",
+        "Petrakis IL",
+        "Peterson AL",
+        "Krystal JH"
+      ],
+      "journal": "Neuropsychopharmacology",
+      "year": 2022,
+      "volume": "47",
+      "issue": "8",
+      "pages": "1574-1581",
+      "doi": "10.1038/s41386-022-01266-9",
+      "url": "https://pubmed.ncbi.nlm.nih.gov/35046508/",
+      "claim_language": "demonstrates",
+      "abstract_summary": "158 veterans/military, multi-center RCT. Standard-dose ketamine (0.5 mg/kg) showed rapid antidepressant effect (MADRS) vs placebo. No significant dose-related PTSD symptom reduction. Dissociative effects returned to baseline in 2h. Well tolerated.",
+      "topic_tags": [
+        "ketamine",
+        "PTSD",
+        "veterans",
+        "antidepressant",
+        "RCT",
+        "dissociative"
+      ],
+      "use_for_sections": [
+        "ketamine therapy",
+        "PTSD treatment",
+        "treatment-resistant depression",
+        "psychedelic-adjacent"
+      ]
+    },
+    {
+      "entry_id": "P4",
+      "tier": "T2",
+      "pmid": "41205366",
+      "title": "Efficacy, all-cause discontinuation, and safety of serotonergic psychedelics and MDMA to treat mental disorders: A living systematic review with meta-analysis.",
+      "authors": [
+        "Hojlund M",
+        "Kafali HY",
+        "Kirmizi B",
+        "Fusar-Poli P",
+        "Correll CU",
+        "Cortese S",
+        "Sabe M",
+        "Rosenblat JD",
+        "Solmi M"
+      ],
+      "journal": "European Neuropsychopharmacology",
+      "year": 2025,
+      "volume": "101",
+      "pages": "41-55",
+      "doi": "10.1016/j.euroneuro.2025.09.011",
+      "url": "https://pubmed.ncbi.nlm.nih.gov/41205366/",
+      "claim_language": "evidence suggests",
+      "abstract_summary": "30 RCTs, 1480 participants. MDMA for PTSD: SMD -0.85 (moderate certainty). Psilocybin/LSD for MDD: SMD -0.62. Anxiety disorders: moderate-large effects. Alcohol use disorder: no benefit. MDMA/psychedelics not associated with higher discontinuation rates.",
+      "topic_tags": [
+        "psilocybin",
+        "MDMA",
+        "LSD",
+        "mental disorders",
+        "PTSD",
+        "MDD",
+        "living systematic review",
+        "meta-analysis"
+      ],
+      "use_for_sections": [
+        "MDMA therapy",
+        "psilocybin",
+        "psychedelics",
+        "PTSD",
+        "depression treatment"
+      ]
+    },
+    {
+      "entry_id": "P5",
+      "tier": "T2",
+      "pmid": "38598236",
+      "title": "Acute Adverse Effects of Therapeutic Doses of Psilocybin: A Systematic Review and Meta-Analysis.",
+      "authors": [
+        "Yerubandi A",
+        "Thomas JE",
+        "Bhuiya NMMA",
+        "Harrington C",
+        "Villa Zapata L",
+        "Caballero J"
+      ],
+      "journal": "JAMA Network Open",
+      "year": 2024,
+      "volume": "7",
+      "issue": "4",
+      "pages": "e245960",
+      "doi": "10.1001/jamanetworkopen.2024.5960",
+      "url": "https://pubmed.ncbi.nlm.nih.gov/38598236/",
+      "claim_language": "evidence suggests",
+      "abstract_summary": "6 studies, 528 participants. Headache, nausea, anxiety, dizziness, elevated BP all statistically significant vs placebo. All adverse effects tolerable and resolved within 48 hours. No significant risk of paranoia or thought disorder. Safety profile acceptable for therapeutic use.",
+      "topic_tags": [
+        "psilocybin",
+        "safety",
+        "adverse effects",
+        "meta-analysis",
+        "nausea",
+        "headache",
+        "tolerability"
+      ],
+      "use_for_sections": [
+        "psilocybin safety",
+        "side effects",
+        "adverse effects",
+        "dosing guidance"
+      ]
+    },
+    {
+      "entry_id": "P6",
+      "tier": "T2",
+      "pmid": "39655749",
+      "title": "Psychedelics as an intervention for psychological, existential distress in terminally ill patients: A systematic review and network meta-analysis.",
+      "authors": [
+        "Marchi M",
+        "Farina R",
+        "Rachedi K",
+        "Laonigro F",
+        "Zuljević MF",
+        "Pingani L",
+        "Ferrari S",
+        "Somers M",
+        "Boks MPM",
+        "Galeazzi GM"
+      ],
+      "journal": "Journal of Psychopharmacology",
+      "year": 2024,
+      "volume": null,
+      "pages": "2698811241303594",
+      "doi": "10.1177/02698811241303594",
+      "url": "https://pubmed.ncbi.nlm.nih.gov/39655749/",
+      "claim_language": "evidence suggests",
+      "abstract_summary": "9 RCTs, 606 participants. Psilocybin best for depression (NMA). LSD best for anxiety. Overall psychedelics effective for existential distress in terminal illness. Tolerability comparable. Head-to-head comparisons not statistically significant. More RCTs needed.",
+      "topic_tags": [
+        "psychedelics",
+        "psilocybin",
+        "LSD",
+        "end of life",
+        "terminal illness",
+        "network meta-analysis"
+      ],
+      "use_for_sections": [
+        "end-of-life care",
+        "psilocybin",
+        "existential distress",
+        "terminal illness"
+      ]
+    },
+    {
+      "entry_id": "P7",
+      "tier": "T3a",
+      "pmid": "33479342",
+      "title": "Positive expectations predict improved mental-health outcomes linked to psychedelic microdosing.",
+      "authors": [
+        "Kaertner LS",
+        "Steinborn MB",
+        "Kettner H",
+        "Spriggs MJ",
+        "Roseman L",
+        "Buchborn T",
+        "Balaet M",
+        "Timmermann C",
+        "Erritzoe D",
+        "Carhart-Harris RL"
+      ],
+      "journal": "Scientific Reports",
+      "year": 2021,
+      "volume": "11",
+      "issue": "1",
+      "pages": "1941",
+      "doi": "10.1038/s41598-021-81446-7",
+      "url": "https://pubmed.ncbi.nlm.nih.gov/33479342/",
+      "claim_language": "associated with",
+      "abstract_summary": "81 participants, 4-week microdosing prospective study. Improved wellbeing, reduced anxiety and depression. Placebo response confirmed — positive expectancy at baseline predicted outcomes. Authors explicitly caution against overstating therapeutic value.",
+      "topic_tags": [
+        "microdosing",
+        "psilocybin",
+        "LSD",
+        "wellbeing",
+        "placebo",
+        "observational"
+      ],
+      "use_for_sections": [
+        "microdosing",
+        "psilocybin wellness",
+        "placebo effects",
+        "expectations"
+      ]
+    },
+    {
+      "entry_id": "P8",
+      "tier": "T3b",
+      "pmid": "37555675",
+      "title": "Emerging Perspectives in Addiction Psychiatry.",
+      "authors": [
+        "Jordan A"
+      ],
+      "journal": "The Journal of Clinical Psychiatry",
+      "year": 2023,
+      "volume": "84",
+      "issue": "4",
+      "pages": null,
+      "doi": "10.4088/JCP.84.4",
+      "url": "https://pubmed.ncbi.nlm.nih.gov/37555675/",
+      "claim_language": "evidence suggests",
+      "abstract_summary": "Review of addiction psychiatry. Psilocybin (FDA breakthrough therapy) potential for depression, anxiety, alcohol use disorder, and opioid withdrawal. Comprehensive public health approach needed. Most effective medications for AUD and OUD underutilized.",
+      "topic_tags": [
+        "psilocybin",
+        "addiction",
+        "alcohol",
+        "opioid",
+        "SUD",
+        "FDA breakthrough therapy"
+      ],
+      "use_for_sections": [
+        "psilocybin for addiction",
+        "alcohol treatment",
+        "SUD",
+        "opioid withdrawal"
+      ]
+    },
+    {
+      "entry_id": "M1",
+      "tier": "T2",
+      "pmid": "40959699",
+      "title": "Benefits, side effects, and uses of Hericium erinaceus as a supplement: a systematic review.",
+      "authors": [
+        "Menon A",
+        "Jalal A",
+        "Arshad Z",
+        "Nawaz FA",
+        "Kashyap R"
+      ],
+      "journal": "Frontiers in Nutrition",
+      "year": 2025,
+      "volume": "12",
+      "pages": "1641246",
+      "doi": "10.3389/fnut.2025.1641246",
+      "url": "https://pubmed.ncbi.nlm.nih.gov/40959699/",
+      "claim_language": "evidence suggests",
+      "abstract_summary": "PRISMA systematic review: 5 RCTs, 15 lab studies, 3 pilot trials. HE effective for neuroprotection, cognitive function, anti-tumor activity, gut health (SCFA bacteria), anxiety, depression, and sleep. Erinacines key bioactive. Side effects: stomach discomfort, headache, allergic reactions.",
+      "topic_tags": [
+        "Lion's Mane",
+        "Hericium erinaceus",
+        "cognitive",
+        "neuroprotection",
+        "gut health",
+        "depression",
+        "anxiety",
+        "systematic review"
+      ],
+      "use_for_sections": [
+        "Lion's Mane",
+        "functional mushrooms",
+        "cognitive health",
+        "neuroprotection",
+        "gut health"
+      ]
+    },
+    {
+      "entry_id": "M2",
+      "tier": "T2",
+      "pmid": "39988819",
+      "title": "Hericium erinaceus: A possible future therapeutic treatment for the prevention and delayed progression of Alzheimer's disease? - A narrative review.",
+      "authors": [
+        "Cornford N",
+        "Charnley M"
+      ],
+      "journal": "Nutrition Research Reviews",
+      "year": 2025,
+      "volume": "38",
+      "issue": "2",
+      "pages": "613-627",
+      "doi": "10.1017/S0954422425000058",
+      "url": "https://pubmed.ncbi.nlm.nih.gov/39988819/",
+      "claim_language": "evidence suggests",
+      "abstract_summary": "3 RCTs + 13 animal studies. HE demonstrates positive cognitive outcomes in humans and animal models. Erinacine-A enriched HE highest potency and crosses biological barriers. Evidence supports potential in delaying Alzheimer's progression.",
+      "topic_tags": [
+        "Lion's Mane",
+        "Alzheimer's",
+        "dementia",
+        "erinacine",
+        "neuroprotection",
+        "narrative review"
+      ],
+      "use_for_sections": [
+        "Lion's Mane for dementia",
+        "Alzheimer's prevention",
+        "neuroprotection"
+      ]
+    },
+    {
+      "entry_id": "M3",
+      "tier": "T1",
+      "pmid": "38140277",
+      "title": "Acute Effects of Naturally Occurring Guayusa Tea and Nordic Lion's Mane Extracts on Cognitive Performance.",
+      "authors": [
+        "La Monica MB",
+        "Raub B",
+        "Ziegenfuss EJ",
+        "Hartshorn S",
+        "Grdic J",
+        "Gustat A",
+        "Sandrock J",
+        "Ziegenfuss TN"
+      ],
+      "journal": "Nutrients",
+      "year": 2023,
+      "volume": "15",
+      "issue": "24",
+      "pages": null,
+      "doi": "10.3390/nu15245018",
+      "url": "https://pubmed.ncbi.nlm.nih.gov/38140277/",
+      "claim_language": "demonstrates",
+      "abstract_summary": "Double-blind RCT crossover. Single 1g dose of Lion's Mane improved working memory, attention, reaction time at 2h. Improved happiness ratings. No blood pressure elevation (unlike guayusa). Acute cognitive benefit confirmed in healthy adults.",
+      "topic_tags": [
+        "Lion's Mane",
+        "RCT",
+        "cognition",
+        "memory",
+        "attention",
+        "reaction time",
+        "nootropic"
+      ],
+      "use_for_sections": [
+        "Lion's Mane cognition",
+        "working memory",
+        "acute cognitive benefit",
+        "nootropics"
+      ]
+    },
+    {
+      "entry_id": "M4",
+      "tier": "T3b",
+      "pmid": "38398467",
+      "title": "Exploring the Therapeutic Potential of Ganoderma lucidum in Cancer.",
+      "authors": [
+        "Cancemi G",
+        "Caserta S",
+        "Gangemi S",
+        "Pioggia G",
+        "Allegra A"
+      ],
+      "journal": "Journal of Clinical Medicine",
+      "year": 2024,
+      "volume": "13",
+      "issue": "4",
+      "pages": null,
+      "doi": "10.3390/jcm13041153",
+      "url": "https://pubmed.ncbi.nlm.nih.gov/38398467/",
+      "claim_language": "evidence suggests",
+      "abstract_summary": "Reishi (Ganoderma lucidum) ganoderic acid anti-proliferative in 26 cancer cell types, especially leukemia, lymphoma, myeloma. Multiple mechanisms: immune stimulation, MAP-K, apoptosis. T/B cell differentiation, NK activity in in vivo model.",
+      "topic_tags": [
+        "Reishi",
+        "Ganoderma lucidum",
+        "cancer",
+        "immune",
+        "ganoderic acid",
+        "leukemia",
+        "apoptosis"
+      ],
+      "use_for_sections": [
+        "Reishi",
+        "cancer support",
+        "immune health",
+        "functional mushrooms"
+      ]
+    },
+    {
+      "entry_id": "M5",
+      "tier": "T3b",
+      "pmid": "36985456",
+      "title": "Potential Anti-Rheumatoid Arthritis Activities and Mechanisms of Ganoderma lucidum Polysaccharides.",
+      "authors": [
+        "Meng M",
+        "Yao J",
+        "Zhang Y",
+        "Sun H",
+        "Liu M"
+      ],
+      "journal": "Molecules",
+      "year": 2023,
+      "volume": "28",
+      "issue": "6",
+      "pages": null,
+      "doi": "10.3390/molecules28062483",
+      "url": "https://pubmed.ncbi.nlm.nih.gov/36985456/",
+      "claim_language": "evidence suggests",
+      "abstract_summary": "GLP inhibits RA synovial fibroblast proliferation, modulates inflammatory cytokines (TNF, IL-1B, IL-6), reduces angiogenesis (anti-VEGF), protects cartilage and bone. T/B cell and macrophage immunomodulation. Promising RA therapeutic.",
+      "topic_tags": [
+        "Reishi",
+        "Ganoderma lucidum",
+        "polysaccharides",
+        "rheumatoid arthritis",
+        "anti-inflammatory",
+        "immunomodulation"
+      ],
+      "use_for_sections": [
+        "Reishi for joints",
+        "anti-inflammatory mushrooms",
+        "RA",
+        "functional mushrooms"
+      ]
+    },
+    {
+      "entry_id": "M6",
+      "tier": "T3b",
+      "pmid": "39694962",
+      "title": "Immunopharmacological Insights into Cordyceps spp.: Harnessing Therapeutic Potential for Sepsis.",
+      "authors": [
+        "Saxena J",
+        "Agarwal G",
+        "Das S",
+        "Kumar A",
+        "Thakkar K",
+        "Kaushik S",
+        "Srivatsava VK",
+        "Siddiqui AJ",
+        "Jyoti A"
+      ],
+      "journal": "Current Pharmaceutical Design",
+      "year": 2025,
+      "volume": "31",
+      "issue": "11",
+      "pages": "823-842",
+      "doi": "10.2174/0113816128326301240920040036",
+      "url": "https://pubmed.ncbi.nlm.nih.gov/39694962/",
+      "claim_language": "evidence suggests",
+      "abstract_summary": "Cordyceps spp. bioactive compounds (nucleosides, sterols, flavonoids, phenolics) have anti-inflammatory, antioxidant, antibacterial, immunomodulatory properties. Organ protective in brain, liver, kidneys, lungs, heart in sepsis models.",
+      "topic_tags": [
+        "Cordyceps",
+        "anti-inflammatory",
+        "antioxidant",
+        "immune",
+        "organ protection",
+        "energy",
+        "adaptogen"
+      ],
+      "use_for_sections": [
+        "Cordyceps",
+        "energy",
+        "immune support",
+        "functional mushrooms",
+        "adaptogen"
+      ]
+    },
+    {
+      "entry_id": "M7",
+      "tier": "T4",
+      "pmid": "36111653",
+      "title": "Animal evidence considered in determination of cannabis smoke and delta-THC as causing reproductive toxicity; Part II. Neurodevelopmental effects.",
+      "authors": [
+        "Iyer P",
+        "Niknam Y",
+        "Campbell M",
+        "Moran F",
+        "Kaufman F",
+        "Kim A",
+        "Sandy M",
+        "Zeise L"
+      ],
+      "journal": "Birth Defects Research",
+      "year": 2022,
+      "volume": "114",
+      "issue": "18",
+      "pages": "1155-1168",
+      "doi": "10.1002/bdr2.2084",
+      "url": "https://pubmed.ncbi.nlm.nih.gov/36111653/",
+      "claim_language": "shown in preclinical models",
+      "abstract_summary": "Animal studies: prenatal THC exposure causes cognitive impairment, anxiety, drug sensitivity in offspring. Synaptic plasticity genes altered. Cross-generational epigenetic effects. ECS developmental context relevant to mushroom ECS interaction research.",
+      "topic_tags": [
+        "THC",
+        "prenatal",
+        "neurodevelopment",
+        "epigenetics",
+        "ECS",
+        "developmental context"
+      ],
+      "use_for_sections": [
+        "ECS developmental role",
+        "cannabis risks in pregnancy",
+        "safety context"
+      ]
+    }
+  ]
+}
