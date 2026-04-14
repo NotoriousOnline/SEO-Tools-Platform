@@ -49,7 +49,8 @@ export function ParticleBackground() {
       if (!ctx || !canvas) return;
       ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-      for (const p of particles) {
+      for (let i = 0; i < particles.length; i++) {
+        const p = particles[i];
         p.x += p.vx;
         p.y += p.vy;
 
@@ -58,11 +59,14 @@ export function ParticleBackground() {
 
         ctx.beginPath();
         ctx.arc(p.x, p.y, p.radius, 0, Math.PI * 2);
-        ctx.fillStyle = `rgba(139, 92, 246, ${p.opacity})`;
+        const cyan = i % 2 === 0;
+        ctx.fillStyle = cyan
+          ? `rgba(34, 211, 238, ${p.opacity})`
+          : `rgba(217, 70, 239, ${p.opacity})`;
         ctx.fill();
       }
 
-      ctx.strokeStyle = "rgba(99, 102, 241, 0.1)";
+      ctx.strokeStyle = "rgba(34, 211, 238, 0.1)";
       ctx.lineWidth = 0.5;
       for (let i = 0; i < particles.length; i++) {
         for (let j = i + 1; j < particles.length; j++) {

@@ -13,6 +13,6 @@
 
 @layer utilities {
   .glass {
-    @apply border border-white/20 bg-white/5 backdrop-blur-md;
+    @apply border border-cyan-200/30 bg-white/40 backdrop-blur-md;
   }
 }

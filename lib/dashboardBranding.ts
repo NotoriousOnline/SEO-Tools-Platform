@@ -1,17 +1,25 @@
 /**
  * Dashboard shell: app name, taglines, and per-tool accents (nav + cards + tool header).
+ * Palette: slate + cyan + fuchsia — “AI agents / command center” aesthetic.
  */
 export const dashboard = {
-  appName: "Content Studio",
+  appName: "Agent Console",
   /** Shown in sidebar next to logo */
-  appNameShort: "Studio",
+  appNameShort: "Agents",
   tagline:
-    "Article discovery, SEO content, and WordPress publishing—each tool with its own workflow.",
-  logoLetter: "C",
+    "Orchestrate AI agents for meetings, content, and workflows—each runs with its own tools, prompts, and guardrails.",
+  logoLetter: "A",
+  heroTitle: "AI agent tools dashboard",
+  sectionLabel: "Agent workflows",
+  navOverview: "Command",
+  navAgents: "Active agents",
+  sidebarFooter:
+    "API keys stay on the server—agents never expose secrets in the browser.",
 } as const;
 
 /** Short labels for home cards (in addition to the full tool title from registry). */
 export const toolDashboardLabel: Record<string, string> = {
+  "meeting-to-actions": "Meetings & tasks",
   "article-title-discovery": "Ideas & angles",
   "content-production": "Publish anywhere",
   "weed-com-content-production": "Weed.com editorial",
@@ -27,12 +35,12 @@ export type SidebarNavTokens = {
 };
 
 export const homeSidebarNav: SidebarNavTokens = {
-  bar: "bg-indigo-400",
+  bar: "bg-cyan-400",
   rowActive:
-    "bg-white/[0.12] text-white shadow-[inset_0_1px_0_0_rgba(255,255,255,0.06)] ring-1 ring-white/10",
-  rowIdle: "text-slate-400 hover:bg-white/[0.06] hover:text-indigo-100",
-  iconActive: "bg-indigo-500/40 text-indigo-50 ring-1 ring-indigo-300/25 shadow-inner",
-  iconIdle: "bg-white/[0.06] text-slate-500 group-hover:bg-white/10 group-hover:text-indigo-200",
+    "bg-cyan-500/[0.14] text-white shadow-[inset_0_1px_0_0_rgba(255,255,255,0.06)] ring-1 ring-cyan-400/20",
+  rowIdle: "text-slate-400 hover:bg-white/[0.05] hover:text-cyan-200/90",
+  iconActive: "bg-cyan-500/35 text-cyan-50 ring-1 ring-cyan-300/30 shadow-inner",
+  iconIdle: "bg-white/[0.06] text-slate-500 group-hover:bg-cyan-500/10 group-hover:text-cyan-200",
 };
 
 type ToolTheme = {
@@ -46,23 +54,39 @@ type ToolTheme = {
 };
 
 const defaultTheme: ToolTheme = {
-  headerAccent: "border-l-4 border-indigo-400",
-  cardBlob: "from-indigo-200 to-violet-100",
-  cardBorderHover: "hover:border-indigo-200",
-  cardTitleHover: "group-hover:text-indigo-600",
-  cardCta: "text-indigo-600",
+  headerAccent: "border-l-4 border-cyan-500",
+  cardBlob: "from-cyan-300/90 to-fuchsia-200/80",
+  cardBorderHover: "hover:border-cyan-300/70",
+  cardTitleHover: "group-hover:text-cyan-800",
+  cardCta: "text-cyan-600",
   descriptionClass: "text-slate-600",
   sidebarNav: {
-    bar: "bg-indigo-400",
+    bar: "bg-cyan-400",
     rowActive:
-      "bg-white/[0.12] text-white shadow-[inset_0_1px_0_0_rgba(255,255,255,0.06)] ring-1 ring-white/10",
-    rowIdle: "text-slate-400 hover:bg-white/[0.06] hover:text-slate-200",
-    iconActive: "bg-indigo-500/40 text-indigo-50 ring-1 ring-indigo-300/25",
-    iconIdle: "bg-white/[0.06] text-slate-500 group-hover:text-indigo-200",
+      "bg-cyan-500/[0.14] text-white shadow-[inset_0_1px_0_0_rgba(255,255,255,0.06)] ring-1 ring-cyan-400/20",
+    rowIdle: "text-slate-400 hover:bg-white/[0.05] hover:text-cyan-200/90",
+    iconActive: "bg-cyan-500/35 text-cyan-50 ring-1 ring-cyan-300/30",
+    iconIdle: "bg-white/[0.06] text-slate-500 group-hover:text-cyan-200",
   },
 };
 
 const themes: Record<string, ToolTheme> = {
+  "meeting-to-actions": {
+    headerAccent: "border-l-4 border-fuchsia-500",
+    cardBlob: "from-fuchsia-200/90 to-cyan-200/70",
+    cardBorderHover: "hover:border-fuchsia-300/70",
+    cardTitleHover: "group-hover:text-fuchsia-900",
+    cardCta: "text-fuchsia-700",
+    descriptionClass: "text-slate-600",
+    sidebarNav: {
+      bar: "bg-fuchsia-500",
+      rowActive:
+        "bg-fuchsia-500/[0.18] text-white shadow-[inset_0_1px_0_0_rgba(255,255,255,0.06)] ring-1 ring-fuchsia-400/25",
+      rowIdle: "text-slate-400 hover:bg-white/[0.05] hover:text-fuchsia-200/90",
+      iconActive: "bg-fuchsia-500/40 text-fuchsia-50 ring-1 ring-fuchsia-300/35",
+      iconIdle: "bg-white/[0.06] text-slate-500 group-hover:text-fuchsia-200",
+    },
+  },
   "article-title-discovery": {
     headerAccent: "border-l-4 border-violet-500",
     cardBlob: "from-violet-200 to-fuchsia-100",
