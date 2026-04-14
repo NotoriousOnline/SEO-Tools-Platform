@@ -1,8 +1,47 @@
-import Anthropic from "@anthropic-ai/sdk";
+import Anthropic, { APIError, AuthenticationError } from "@anthropic-ai/sdk";
 
-const client = new Anthropic({
-  apiKey: process.env.ANTHROPIC_API_KEY ?? "",
-});
+/**
+ * Normalize key from .env (BOM, quotes, Bearer prefix, stray whitespace → 401 invalid x-api-key).
+ * Optional: set ANTHROPIC_API_KEY instead of mixing in keys meant for other providers.
+ */
+export function getAnthropicApiKey(): string {
+  const raw =
+    process.env.ANTHROPIC_API_KEY?.trim() ||
+    process.env.ANTHROPIC_SECRET_KEY?.trim() ||
+    "";
+  let k = raw.replace(/^\uFEFF/, "").trim().replace(/^["']|["']$/g, "");
+  if (/^Bearer\s+/i.test(k)) k = k.replace(/^Bearer\s+/i, "").trim();
+  return k;
+}
+
+function getAnthropicClient(): Anthropic {
+  const apiKey = getAnthropicApiKey();
+  if (!apiKey) {
+    throw new Error(
+      "ANTHROPIC_API_KEY is not set. Add it to .env.local (or Vercel env) and restart the dev server."
+    );
+  }
+  return new Anthropic({ apiKey });
+}
+
+function httpStatus(err: unknown): number | undefined {
+  if (!err || typeof err !== "object") return undefined;
+  const s = (err as { status?: number | string }).status;
+  if (typeof s === "number" && !Number.isNaN(s)) return s;
+  if (typeof s === "string") {
+    const n = parseInt(s, 10);
+    return Number.isNaN(n) ? undefined : n;
+  }
+  return undefined;
+}
+
+function isAuthError(err: unknown): boolean {
+  if (err instanceof AuthenticationError) return true;
+  if (err instanceof APIError && httpStatus(err) === 401) return true;
+  if (httpStatus(err) === 401) return true;
+  const msg = err instanceof Error ? err.message : String(err);
+  return /authentication_error|invalid x-api-key|invalid api key|^401\b/i.test(msg);
+}
 
 const MAX_429_RETRIES = 5;
 const DEFAULT_RETRY_MS = 15_000;
@@ -55,6 +94,7 @@ export async function callClaude(
   options?: { maxTokens?: number }
 ): Promise<string> {
   const maxTokens = options?.maxTokens ?? 2048;
+  const client = getAnthropicClient();
   let lastErr: unknown;
   for (let attempt = 0; attempt <= MAX_429_RETRIES; attempt++) {
     try {
@@ -72,6 +112,16 @@ export async function callClaude(
       return "";
     } catch (err) {
       lastErr = err;
+      if (isAuthError(err)) {
+        const key = getAnthropicApiKey();
+        const hint =
+          key.length > 0 && !key.startsWith("sk-ant")
+            ? " Your value does not look like an Anthropic secret (expected sk-ant-…). Make sure you are not using an OpenAI or other vendor key."
+            : "";
+        throw new Error(
+          `Anthropic rejected the API key (401 invalid x-api-key).${hint} Create or rotate a key at https://console.anthropic.com/settings/keys and set ANTHROPIC_API_KEY in .env.local (one line, no quotes). Restart the dev server. On Vercel: Project → Settings → Environment Variables → redeploy.`
+        );
+      }
       if (!isRateLimitError(err) || attempt === MAX_429_RETRIES) {
         throw err;
       }
