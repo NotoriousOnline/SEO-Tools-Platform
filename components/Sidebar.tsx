@@ -38,7 +38,17 @@ function IconLeaf({ className }: { className?: string }) {
   );
 }
 
+/** Agent / automation sparkle (Meeting to Actions) */
+function IconAgent({ className }: { className?: string }) {
+  return (
+    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className={className} aria-hidden>
+      <path strokeLinecap="round" strokeLinejoin="round" d="M9.813 15.904L9 18.75l-.813-2.846a4.5 4.5 0 00-3.09-3.09L2.25 12l2.846-.813a4.5 4.5 0 003.09-3.09L9 5.25l.813 2.846a4.5 4.5 0 003.09 3.09L15.75 12l-2.846.813a4.5 4.5 0 00-3.09 3.09zM18.259 8.715L18 9.75l-.259-1.035a3.375 3.375 0 00-2.455-2.456L14.25 6l1.036-.259a3.375 3.375 0 002.455-2.456L18 2.25l.259 1.035a3.375 3.375 0 002.456 2.456L21.75 6l-1.035.259a3.375 3.375 0 00-2.456 2.456zM16.894 20.567L16.5 21.75l-.394-1.183a2.25 2.25 0 00-1.423-1.423L13.5 18.75l1.183-.394a2.25 2.25 0 001.423-1.423l.394-1.183.394 1.183a2.25 2.25 0 001.423 1.423l1.183.394-1.183.394a2.25 2.25 0 00-1.423 1.423z" />
+    </svg>
+  );
+}
+
 const toolIcons: Record<string, ComponentType<{ className?: string }>> = {
+  "meeting-to-actions": IconAgent,
   "article-title-discovery": IconNewspaper,
   "content-production": IconCompose,
   "weed-com-content-production": IconLeaf,
@@ -94,7 +104,9 @@ function NavRow({ href, active, icon, title, subtitle, tokens, onNavigate }: Nav
 
 function NavSectionLabel({ children }: { children: ReactNode }) {
   return (
-    <p className="mb-2 px-3 text-[10px] font-bold uppercase tracking-[0.22em] text-slate-500">{children}</p>
+    <p className="mb-2 px-3 text-[10px] font-bold uppercase tracking-[0.22em] text-slate-500 [text-shadow:0_0_24px_rgba(34,211,238,0.12)]">
+      {children}
+    </p>
   );
 }
 
@@ -111,7 +123,7 @@ export function Sidebar() {
       <button
         type="button"
         onClick={() => setMobileOpen(true)}
-        className="fixed left-4 top-4 z-40 flex h-11 w-11 items-center justify-center rounded-2xl bg-gradient-to-br from-indigo-600 to-violet-700 text-white shadow-lg shadow-indigo-900/35 md:hidden"
+        className="fixed left-4 top-4 z-40 flex h-11 w-11 items-center justify-center rounded-2xl bg-gradient-to-br from-cyan-500 to-fuchsia-600 text-white shadow-lg shadow-cyan-900/40 md:hidden"
         aria-label="Open menu"
       >
         <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="h-5 w-5">
@@ -124,18 +136,18 @@ export function Sidebar() {
       ) : null}
 
       <aside
-        className={`fixed inset-y-0 left-0 z-50 flex w-[280px] max-w-[85vw] flex-col border-r border-white/[0.07] bg-gradient-to-b from-[#0f1020] via-[#121329] to-[#0c0d18] shadow-2xl shadow-black/40 transition-transform duration-300 ease-out md:relative md:inset-auto md:max-w-none md:translate-x-0 md:shadow-none ${
+        className={`fixed inset-y-0 left-0 z-50 flex w-[280px] max-w-[85vw] flex-col border-r border-cyan-500/10 bg-gradient-to-b from-slate-950 via-[#0c1220] to-slate-950 shadow-2xl shadow-black/50 transition-transform duration-300 ease-out md:relative md:inset-auto md:max-w-none md:translate-x-0 md:shadow-none ${
           mobileOpen ? "translate-x-0" : "-translate-x-full md:translate-x-0"
         }`}
       >
         <div className="flex items-center justify-between border-b border-white/[0.06] px-4 py-4 md:px-5">
           <Link href="/" onClick={close} className="group flex min-w-0 items-center gap-3">
-            <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br from-violet-500 to-indigo-600 text-sm font-bold text-white shadow-lg shadow-violet-600/25 ring-1 ring-white/10">
+            <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br from-cyan-400 to-fuchsia-600 text-sm font-bold text-white shadow-lg shadow-cyan-500/30 ring-1 ring-white/15">
               {dashboard.logoLetter}
             </span>
             <span className="min-w-0 leading-tight">
               <span className="block truncate text-base font-bold tracking-tight text-white">{dashboard.appNameShort}</span>
-              <span className="block truncate text-xs font-medium text-indigo-300/85">{dashboard.appName}</span>
+              <span className="block truncate text-xs font-medium text-cyan-300/90">{dashboard.appName}</span>
             </span>
           </Link>
           <button
@@ -152,14 +164,14 @@ export function Sidebar() {
 
         <nav className="flex flex-1 flex-col gap-8 overflow-y-auto px-3 py-6 md:px-4">
           <div>
-            <NavSectionLabel>Overview</NavSectionLabel>
+            <NavSectionLabel>{dashboard.navOverview}</NavSectionLabel>
             <div className="space-y-1">
               <NavRow
                 href="/"
                 active={isHomeActive}
                 icon={<IconHome />}
                 title="Dashboard"
-                subtitle="All tools"
+                subtitle="All agents"
                 tokens={getSidebarNav("home")}
                 onNavigate={close}
               />
@@ -167,7 +179,7 @@ export function Sidebar() {
           </div>
 
           <div>
-            <NavSectionLabel>Workflows</NavSectionLabel>
+            <NavSectionLabel>{dashboard.navAgents}</NavSectionLabel>
             <div className="space-y-1">
               {tools.map((tool) => {
                 const href = `/tools/${tool.slug}`;
@@ -192,9 +204,7 @@ export function Sidebar() {
         </nav>
 
         <div className="mt-auto border-t border-white/[0.06] px-4 py-4 md:px-5">
-          <p className="text-[11px] leading-relaxed text-slate-500">
-            API keys and tokens are read on the server only—never exposed to the browser.
-          </p>
+          <p className="text-[11px] leading-relaxed text-slate-500">{dashboard.sidebarFooter}</p>
         </div>
       </aside>
     </>
