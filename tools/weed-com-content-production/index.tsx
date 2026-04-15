@@ -10,6 +10,7 @@ export default function WeedComContentProductionToolPage() {
       apiPrefix="/api/weed-com-content-production"
       showReferenceUrl={false}
       manualBriefFields
+      showExpertInsightCountSelector
     />
   );
 }

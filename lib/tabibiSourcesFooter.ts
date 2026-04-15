@@ -1,7 +1,7 @@
 import type { TabibiPmidEntry } from "@/lib/tabibiPmidDatabase";
 import { formatTabibiCitationLine } from "@/lib/tabibiPmidDatabase";
 
-/** User asked for max 3 or 4 sources; we cap at 4. */
+/** Safety cap; final list is restricted to PMIDs already cited in Expert Insight. */
 export const TABIBI_SOURCES_FOOTER_MAX = 4;
 
 const BLOCK_START = "<!-- tabibi-sources-footer:start -->";
@@ -68,9 +68,8 @@ function findMatchingOuterCloseDiv(html: string, openTagStart: number): number {
 }
 
 /**
- * Picks up to `max` entries from `ranked` (most relevant first):
- * - Prefer PMIDs that appear in the HTML as PubMed links, in ranked order.
- * - Pad with the next ranked entries until `max` (or list ends).
+ * Picks up to `max` entries from `ranked`, STRICTLY limited to PMIDs already
+ * present in the HTML (Expert Insight citations). No padding with extra PMIDs.
  */
 export function pickTabibiSourcesForFooter(
   html: string,
@@ -86,13 +85,6 @@ export function pickTabibiSourcesForFooter(
   for (const e of ranked) {
     if (out.length >= maxN) break;
     if (inArticle.has(e.pmid) && !seen.has(e.pmid)) {
-      seen.add(e.pmid);
-      out.push(e);
-    }
-  }
-  for (const e of ranked) {
-    if (out.length >= maxN) break;
-    if (!seen.has(e.pmid)) {
       seen.add(e.pmid);
       out.push(e);
     }

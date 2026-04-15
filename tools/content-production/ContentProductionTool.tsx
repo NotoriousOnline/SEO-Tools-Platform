@@ -38,6 +38,7 @@ export function ContentProductionTool({
   showReferenceUrl = true,
   articleSheetFromGoogle = false,
   manualBriefFields = false,
+  showExpertInsightCountSelector = false,
 }: {
   config: ToolConfig;
   /** Separate API namespace per product (e.g. Weed.com uses `/api/weed-com-content-production`). */
@@ -48,6 +49,8 @@ export function ContentProductionTool({
   articleSheetFromGoogle?: boolean;
   /** Weed.com: manual Title, target keyword(s), product type for links, content angle (sheet paused). */
   manualBriefFields?: boolean;
+  /** Weed.com: choose exactly how many Expert Insight boxes to generate. */
+  showExpertInsightCountSelector?: boolean;
 }) {
   const api = apiPrefix.replace(/\/$/, "");
   const [selectedSite, setSelectedSite] = useState<{ id: string; name: string; url: string } | null>(null);
@@ -86,6 +89,7 @@ export function ContentProductionTool({
   const [sheetLoadedLabel, setSheetLoadedLabel] = useState<string | null>(null);
   const [contentAngle, setContentAngle] = useState("");
   const [productTypeForLinks, setProductTypeForLinks] = useState("");
+  const [expertInsightCount, setExpertInsightCount] = useState<1 | 2 | 3>(3);
   const [wordCount, setWordCount] = useState(1500);
   const [generating, setGenerating] = useState(false);
   const [contentLoading, setContentLoading] = useState(false);
@@ -634,6 +638,7 @@ export function ContentProductionTool({
           ...(manualBriefFields && productTypeForLinks.trim()
             ? { productTypeForLinks: productTypeForLinks.trim() }
             : {}),
+          ...(showExpertInsightCountSelector ? { expertInsightCount } : {}),
         }),
       });
       const contentData = await contentRes.json();
@@ -738,6 +743,7 @@ export function ContentProductionTool({
           ...(manualBriefFields && productTypeForLinks.trim()
             ? { productTypeForLinks: productTypeForLinks.trim() }
             : {}),
+          ...(showExpertInsightCountSelector ? { expertInsightCount } : {}),
         }),
       });
       const contentData = (await contentRes.json()) as {
@@ -923,6 +929,7 @@ export function ContentProductionTool({
     setSheetLoadedLabel(null);
     setContentAngle("");
     setProductTypeForLinks("");
+    setExpertInsightCount(3);
     setGeneratedContent(null);
     setGeneratedImages(null);
     setInternalLinksUsed([]);
@@ -1438,7 +1445,7 @@ export function ContentProductionTool({
             <div>
               <label className="mb-2 block text-xs text-slate-500">Word count</label>
               <div className="flex gap-2">
-                {[1200, 1500, 1800].map((n) => (
+                {[1500, 2000, 3000].map((n) => (
                   <label
                     key={n}
                     className={`flex cursor-pointer items-center rounded-lg border px-4 py-2 text-sm transition-colors ${
@@ -1460,6 +1467,36 @@ export function ContentProductionTool({
                 ))}
               </div>
             </div>
+            {showExpertInsightCountSelector ? (
+              <div>
+                <label className="mb-2 block text-xs text-slate-500">Expert Insight boxes</label>
+                <div className="flex gap-2">
+                  {[1, 2, 3].map((n) => (
+                    <label
+                      key={n}
+                      className={`flex cursor-pointer items-center rounded-lg border px-4 py-2 text-sm transition-colors ${
+                        expertInsightCount === n
+                          ? "border-teal-500 bg-teal-50 text-teal-700"
+                          : "border-slate-200 hover:bg-slate-50"
+                      }`}
+                    >
+                      <input
+                        type="radio"
+                        name="expertInsightCount"
+                        value={n}
+                        checked={expertInsightCount === n}
+                        onChange={() => setExpertInsightCount(n as 1 | 2 | 3)}
+                        className="sr-only"
+                      />
+                      {n}
+                    </label>
+                  ))}
+                </div>
+                <p className="mt-1 text-xs text-slate-500">
+                  Generates exactly the selected number of Dr. Tabibi Expert Insight boxes.
+                </p>
+              </div>
+            ) : null}
             <button
               type="button"
               onClick={handleGenerate}

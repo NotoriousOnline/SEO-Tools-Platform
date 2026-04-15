@@ -23,6 +23,8 @@ import { fetchAllProductsForLinkLibrary, getPosts } from "@/lib/wordpressClient"
 /** Richer pool for the model + Supabase library when synced. */
 const INTERNAL_LINK_CANDIDATES_FOR_PROMPT = 14;
 const LIBRARY_USE_MIN = 3;
+const ALLOWED_WORD_COUNTS = new Set([1500, 2000, 3000]);
+const WORD_COUNT_TOLERANCE_RATIO = 0.08;
 
 /** Max characters of existing HTML accepted for refinement (existingHtml + refinementInstructions). */
 const MAX_REFINEMENT_HTML_CHARS = 120_000;
@@ -49,6 +51,65 @@ const ANTHROPIC_MAX_OUTPUT_TOKENS = 8192;
 function maxTokensForArticleHtml(wordCount: number): number {
   const estimated = Math.ceil(wordCount * 3.8);
   return Math.min(ANTHROPIC_MAX_OUTPUT_TOKENS, Math.max(4096, estimated));
+}
+
+function countWordsFromHtml(html: string): number {
+  const plain = html
+    .replace(/<script[\s\S]*?<\/script>/gi, " ")
+    .replace(/<style[\s\S]*?<\/style>/gi, " ")
+    .replace(/<[^>]+>/g, " ")
+    .replace(/&nbsp;/gi, " ")
+    .replace(/&[a-zA-Z0-9#]+;/g, " ");
+  return plain.split(/\s+/).filter(Boolean).length;
+}
+
+function wordCountBounds(target: number): { min: number; max: number } {
+  const min = Math.floor(target * (1 - WORD_COUNT_TOLERANCE_RATIO));
+  const max = Math.ceil(target * (1 + WORD_COUNT_TOLERANCE_RATIO));
+  return { min, max };
+}
+
+async function normalizeWordCountIfNeeded(
+  html: string,
+  title: string,
+  keywords: string[],
+  targetWordCount: number,
+  toolScope: WPToolScope
+): Promise<string> {
+  const current = countWordsFromHtml(html);
+  const { min, max } = wordCountBounds(targetWordCount);
+  if (current >= min && current <= max) return html;
+
+  const direction = current < min ? "expand" : "trim";
+  const weedSafety =
+    toolScope === WP_TOOL_SCOPE.weedComContentProduction
+      ? " Keep Weed.com Learn compliance sections intact: Expert Insight blocks, FAQ, optional amber disclaimer when relevant, Sources, and legal footer."
+      : "";
+  const instructions = `Adjust only the article length to approximately ${targetWordCount} words (acceptable range ${min}-${max}). Current count is ${current}, so ${direction} where needed. Preserve the same structure, links, sections, and meaning.${weedSafety}`;
+
+  const user = `Title: ${title}
+
+Keywords: ${keywords.join(", ")}
+
+----- EXISTING HTML -----
+${html}
+----- END EXISTING HTML -----
+
+Editor instructions:
+${instructions}
+
+Output the complete revised HTML only. No markdown code fences.`;
+
+  try {
+    const revised = await callClaude(CONTENT_REFINEMENT_SYSTEM_TAIL, user, {
+      maxTokens: maxTokensForArticleHtml(targetWordCount),
+    });
+    const cleaned = stripLeadingPostTitleH1(replaceEmDashes(stripHtmlCodeFences(revised)));
+    return cleaned || html;
+  } catch (e) {
+    console.warn("[generate-content] Word-count normalization skipped:", errorMessage(e));
+    return html;
+  }
 }
 
 /** Second pass when the first response hits max_tokens before FAQ/footer (common with long body + inline HTML). */
@@ -303,6 +364,14 @@ export async function postGenerateContent(request: Request, toolScope: WPToolSco
     const body = await request.json();
     const { siteId, title, keywords, wordCount, editorialBrief, contentAngle, productTypeForLinks } = body;
     const bodyRecord = body as Record<string, unknown>;
+    const expertInsightCountRaw = bodyRecord.expertInsightCount;
+    const expertInsightCount =
+      typeof expertInsightCountRaw === "number" &&
+      Number.isInteger(expertInsightCountRaw) &&
+      expertInsightCountRaw >= 1 &&
+      expertInsightCountRaw <= 3
+        ? expertInsightCountRaw
+        : undefined;
 
     const refinementInstructions =
       typeof bodyRecord.refinementInstructions === "string" ? bodyRecord.refinementInstructions.trim() : "";
@@ -322,6 +391,12 @@ export async function postGenerateContent(request: Request, toolScope: WPToolSco
         { error: "Missing or invalid fields: siteId, title, keywords (array), wordCount (number)" },
         { status: 400 }
       );
+    }
+    if (!ALLOWED_WORD_COUNTS.has(wordCount)) {
+      return NextResponse.json({ error: "wordCount must be one of 1500, 2000, or 3000" }, { status: 400 });
+    }
+    if (expertInsightCountRaw != null && expertInsightCount == null) {
+      return NextResponse.json({ error: "expertInsightCount must be an integer between 1 and 3" }, { status: 400 });
     }
 
     const site = await getSiteById(siteId, toolScope);
@@ -413,7 +488,7 @@ export async function postGenerateContent(request: Request, toolScope: WPToolSco
     const initialDraftSystemTail = `You are an expert SEO content writer. Write a complete blog post in valid HTML (not markdown).
 Never wrap the output in code fences: do not use triple backticks, do not write \`\`\`html or \`\`\` before or after the HTML. Return raw HTML only.
 Do NOT put the article title in the body: no <h1> and no title heading. The CMS sets the post title separately.
-Start the body with an introduction using <p>, or the first <h2> section heading. Use <h2> and <h3> only inside the article. Target ${wordCount} words. In the main body, include at least one and up to three editorial internal links (<a>) to post/page URLs from the **Editorial posts and pages** list, chosen for maximum relevance to nearby copy; you may add separate product/Shop Now usage from the **Products** list—editorial links are not optional when that list is non-empty. Use descriptive anchor text. Do not add external links${toolScope === WP_TOOL_SCOPE.weedComContentProduction ? " except up to three PubMed PMID links, only inside Dr. Tabibi Expert Insight expert-cite lines (and duplicated in Sources per Bible)" : ""}.
+Start the body with an introduction using <p>, or the first <h2> section heading. Use <h2> and <h3> only inside the article. Target ${wordCount} words with tight control: keep visible text in ${wordCountBounds(wordCount).min}-${wordCountBounds(wordCount).max} words (HTML tags do not count). In the main body, include at least one and up to three editorial internal links (<a>) to post/page URLs from the **Editorial posts and pages** list, chosen for maximum relevance to nearby copy; you may add separate product/Shop Now usage from the **Products** list—editorial links are not optional when that list is non-empty. Use descriptive anchor text. Do not add external links${toolScope === WP_TOOL_SCOPE.weedComContentProduction ? " except up to three PubMed PMID links, only inside Dr. Tabibi Expert Insight expert-cite lines (and duplicated in Sources per Bible)" : ""}.
 
 Typography: Never use the em dash character (Unicode U+2014). Do not type "—". Use commas,
 semicolons, parentheses, or a spaced hyphen " - " instead when you need a pause or aside.
@@ -495,6 +570,11 @@ ${productBlock}`;
       toolScope === WP_TOOL_SCOPE.weedComContentProduction
         ? buildTabibiLibraryUserBlock(tabibiForArticle)
         : "";
+    const weedExpertInsightCountInstruction =
+      toolScope === WP_TOOL_SCOPE.weedComContentProduction && typeof expertInsightCount === "number"
+        ? `\n\nExpert Insight count requirement: include exactly ${expertInsightCount} Dr. Alexander Tabibi Expert Insight block${expertInsightCount === 1 ? "" : "s"} in the article body.`
+        : "";
+    const wordCountInstruction = `\n\nWord count requirement: target ${wordCount} visible words (exclude HTML tags). Keep final output in ${wordCountBounds(wordCount).min}-${wordCountBounds(wordCount).max}.`;
 
     const initialDraftUserMessage = `Title: ${title}
 
@@ -502,8 +582,10 @@ Keywords: ${keywords.join(", ")}${briefExtra ? `\n\n${briefExtra}` : ""}
 
 Internal link candidates (editorial: pick 1–3 post/page URLs for in-body <a> links—required when the editorial list is non-empty; products: separate Shop Now / commerce usage; each URL at most once):
 ${linksText}${tabibiLibraryBlock}
+${weedExpertInsightCountInstruction}
+${wordCountInstruction}
 
-Write the full HTML blog post.${toolScope === WP_TOOL_SCOPE.weedComContentProduction ? "" : " Include the FAQ block as specified (1 or 2 FAQ subsections by topic fit, bullets in answers where it helps)."} Remember: no em dash character anywhere in the HTML. Do not output an <h1>; the post title is set only in WordPress. Start with <p> or <h2>.${toolScope === WP_TOOL_SCOPE.weedComContentProduction ? ` Body, FAQ, cards, footers: Inter-led font stack per Bible. Expert Insight (.expert-box): every opening tag in that block must include font-family:Inter,sans-serif!important (including PMID <a>) so paste/theme cannot override. FAQ: Bible outer wrapper + <h2>Frequently asked questions</h2> + <h3>/<p> pairs. Double-check every internal link: when the Editorial posts and pages list is non-empty, include at least one and up to three <a> links to those post/page URLs in the main body (most relevant first); Shop Now product blocks are separate and do not satisfy the editorial link requirement. Anchor text must be specific (never rely on 'this guide' / 'this breakdown' style phrasing). Product names must follow a clear contextual lead-in. Do not force the primary keyword into the opening of the first paragraph or into headings. Before finalizing: run Contentenator on every Expert Insight box (Bible v7) — study-type labels match the PubMed record type; each PMID matches that paper (no unrelated or fabricated IDs); specific numeric or outcome claims trace to that same PMID, not a different paper or a review-only mention of another study. At most 3 PubMed citations total; PMIDs only in Expert Insight expert-cite lines; each must use a verified PMID article URL (https://pubmed.ncbi.nlm.nih.gov/<digits>/) — never PubMed ?term= search links — with author/journal/year in adjacent text. Do not output a Sources HTML block: the server appends Sources (up to 4 most relevant PMIDs from the Tabibi JSON). Every Dr. Tabibi Expert Insight block and every product card must use the Bible templates with full inline style=\"...\" attributes (WordPress will not load custom CSS for these). When medication interactions are relevant, include the amber drug-interaction disclaimer box (⚕ icon) from the Bible. End with the legal footer only — required verbatim opening \"For adults 21+ only. Cannabis laws vary by state.\" plus emergency routing; never omit. The article must end completely — never stop mid-sentence.` : ""}`;
+Write the full HTML blog post.${toolScope === WP_TOOL_SCOPE.weedComContentProduction ? "" : " Include the FAQ block as specified (1 or 2 FAQ subsections by topic fit, bullets in answers where it helps)."} Remember: no em dash character anywhere in the HTML. Do not output an <h1>; the post title is set only in WordPress. Start with <p> or <h2>.${toolScope === WP_TOOL_SCOPE.weedComContentProduction ? ` Body, FAQ, cards, footers: Inter-led font stack per Bible. Expert Insight (.expert-box): every opening tag in that block must include font-family:Inter,sans-serif!important (including PMID <a>) so paste/theme cannot override. FAQ: Bible outer wrapper + <h2>Frequently asked questions</h2> + <h3>/<p> pairs. Double-check every internal link: when the Editorial posts and pages list is non-empty, include at least one and up to three <a> links to those post/page URLs in the main body (most relevant first); Shop Now product blocks are separate and do not satisfy the editorial link requirement. Anchor text must be specific (never rely on 'this guide' / 'this breakdown' style phrasing). Product names must follow a clear contextual lead-in. Do not force the primary keyword into the opening of the first paragraph or into headings. Before finalizing: run Contentenator on every Expert Insight box (Bible v7) — study-type labels match the PubMed record type; each PMID matches that paper (no unrelated or fabricated IDs); specific numeric or outcome claims trace to that same PMID, not a different paper or a review-only mention of another study. At most 3 PubMed citations total; PMIDs only in Expert Insight expert-cite lines; each must use a verified PMID article URL (https://pubmed.ncbi.nlm.nih.gov/<digits>/) — never PubMed ?term= search links — with author/journal/year in adjacent text. Do not output a Sources HTML block: the server appends Sources using only PMIDs cited in Expert Insight expert-cite lines (no additional PMIDs). Every Dr. Tabibi Expert Insight block and every product card must use the Bible templates with full inline style=\"...\" attributes (WordPress will not load custom CSS for these). When medication interactions are relevant, include the amber drug-interaction disclaimer box (⚕ icon) from the Bible. End with the legal footer only — required verbatim opening \"For adults 21+ only. Cannabis laws vary by state.\" plus emergency routing; never omit. The article must end completely — never stop mid-sentence.` : ""}`;
 
     const refinementUserMessage = `Title: ${title}
 
@@ -511,6 +593,8 @@ Keywords: ${keywords.join(", ")}${briefExtra ? `\n\n${briefExtra}` : ""}
 
 Internal link candidates (use only these URLs when adding or changing links):
 ${linksText}${tabibiLibraryBlock}
+${weedExpertInsightCountInstruction}
+${wordCountInstruction}
 
 ----- EXISTING HTML -----
 ${existingHtmlRaw}
@@ -528,15 +612,25 @@ Output the complete revised HTML only. No markdown code fences.`;
     });
     let content = stripLeadingPostTitleH1(replaceEmDashes(stripHtmlCodeFences(raw)));
 
-    let tabibiSourcesPicked: TabibiPmidEntry[] = [];
     if (toolScope === WP_TOOL_SCOPE.weedComContentProduction) {
       content = await finalizeWeedLearnHtml(content, title, keywords);
       content = lockExpertBoxTypography(content);
       if (tabibiForArticle.length > 0) {
-        tabibiSourcesPicked = pickTabibiSourcesForFooter(content, tabibiForArticle);
         content = appendTabibiSourcesFooter(content, tabibiForArticle);
       }
     }
+
+    content = await normalizeWordCountIfNeeded(content, title, keywords, wordCount, toolScope);
+    if (toolScope === WP_TOOL_SCOPE.weedComContentProduction) {
+      content = lockExpertBoxTypography(content);
+      if (tabibiForArticle.length > 0) {
+        content = appendTabibiSourcesFooter(content, tabibiForArticle);
+      }
+    }
+    const tabibiSourcesPicked: TabibiPmidEntry[] =
+      toolScope === WP_TOOL_SCOPE.weedComContentProduction && tabibiForArticle.length > 0
+        ? pickTabibiSourcesForFooter(content, tabibiForArticle)
+        : [];
 
     const used: { title: string; url: string }[] = [];
     for (const link of internalLinks) {
@@ -545,7 +639,7 @@ Output the complete revised HTML only. No markdown code fences.`;
       }
     }
 
-    const wordCountActual = content.split(/\s+/).filter(Boolean).length;
+    const wordCountActual = countWordsFromHtml(content);
 
     return NextResponse.json({
       content,

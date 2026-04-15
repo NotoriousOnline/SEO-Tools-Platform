@@ -185,7 +185,7 @@ export function buildTabibiLibraryUserBlock(entries: TabibiPmidEntry[]): string 
 Library: ${meta?.name ?? "Tabibi"} ${meta?.version ?? ""} (${meta?.date ?? ""}). Total entries in file: ${meta?.total_entries ?? ALL.length}.
 
 RULES FOR THIS ARTICLE:
-- You may cite ONLY the PMIDs listed below in Dr. Tabibi Expert Insight expert-cite lines. Do not use any other PMID or PubMed URL anywhere in the HTML. Do not write a Sources section — the server appends Sources (3–4 most relevant rows from this library) after generation.
+- You may cite ONLY the PMIDs listed below in Dr. Tabibi Expert Insight expert-cite lines. Do not use any other PMID or PubMed URL anywhere in the HTML. Do not write a Sources section — the server appends Sources using only PMIDs actually cited in Expert Insight boxes (no extras).
 - Choose up to 3 distinct PMIDs from this list that best match the article title, keywords, and section claims. Place Expert Insight boxes next to the claims they support.
 - Match study-type wording to each entry's evidence tier (${meta?.tier_claim_language ? "see tier tags on each line" : "T1 = RCT-style; T2 = reviews; T3/T4 = observational or preclinical"}). Use each line's claim_language to calibrate hedging (e.g. "demonstrates" vs "evidence suggests" vs "shown in preclinical models").
 - Expert-cite lines must use the PubMed URL shown for that PMID (digits path only).
